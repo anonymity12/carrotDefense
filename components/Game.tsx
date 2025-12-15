@@ -11,9 +11,12 @@ import {
   Coins, 
   Skull,
   Crosshair,
-  Shield
+  Shield,
+  ArrowUpCircle,
+  Trash2,
+  X
 } from 'lucide-react';
-import { CELL_SIZE, GRID_HEIGHT, GRID_WIDTH, TOWER_STATS, ENEMY_STATS, FPS } from '../constants';
+import { CELL_SIZE, GRID_HEIGHT, GRID_WIDTH, TOWER_STATS, ENEMY_STATS, FPS, MAX_TOWER_LEVEL } from '../constants';
 import { Enemy, EnemyType, GameLevel, GameState, Projectile, Tower, TowerType, WaveConfig } from '../types';
 
 // Utility for distance
@@ -43,7 +46,8 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
 
   // React State for rendering
   const [renderTrigger, setRenderTrigger] = useState(0);
-  const [selectedTower, setSelectedTower] = useState<TowerType | null>(null);
+  const [selectedTower, setSelectedTower] = useState<TowerType | null>(null); // For placement
+  const [selectedTowerId, setSelectedTowerId] = useState<string | null>(null); // For upgrades
   const [hoverCell, setHoverCell] = useState<{x: number, y: number} | null>(null);
 
   // Loop Control
@@ -185,9 +189,8 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
       if (tower.cooldown > 0) tower.cooldown--;
 
       // Find Target
-      // Simple logic: Closest or First? Carrot Fantasy usually First (furthest along path).
       let target: Enemy | null = null;
-      let maxDist = TOWER_STATS[tower.type].range;
+      let maxDist = tower.range; // Use instance range, not base stats
       
       // Filter enemies in range
       const inRange = state.enemies.filter(e => dist(tower.x, tower.y, e.x, e.y) <= maxDist);
@@ -208,14 +211,25 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
           x: tower.x,
           y: tower.y,
           targetId: target.id,
-          damage: tower.damage,
-          speed: 0.3, // Projectile speed (grid cells per frame)
+          damage: tower.damage, // Use instance damage
+          speed: 0.3, 
           type: tower.type,
           splashRadius: tower.type === TowerType.FAN ? 1.5 : 0,
           slowFactor: tower.type === TowerType.POOP ? 0.5 : 1,
           slowDuration: tower.type === TowerType.POOP ? 120 : 0
         });
-        tower.cooldown = stats.speed;
+        
+        // Use speed stat from constant, but maybe apply level mod if we wanted (currently handled by cooldown)
+        // Actually, we should probably scale speed (fire rate) with level if we want.
+        // For now, let's say cooldown is determined at fire time. 
+        // We need to store 'speed' (cooldown frames) on the tower instance to allow upgrades to affect it.
+        // But for this implementation, we only stored 'cooldown' (current counter).
+        // Let's re-calculate max cooldown from base stats + level modifier here.
+        const baseSpeed = stats.speed;
+        const fireRateMod = Math.pow(0.9, tower.level - 1); // 10% faster per level
+        const maxCooldown = baseSpeed * fireRateMod;
+        
+        tower.cooldown = maxCooldown;
         
         // Face target
         tower.angle = Math.atan2(target.y - tower.y, target.x - tower.x) * (180 / Math.PI);
@@ -292,37 +306,97 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
     
     // Check if valid placement
     const isPath = gameState.current.level.path.some(p => p.x === x && p.y === y);
-    const hasTower = gameState.current.towers.some(t => t.x === x && t.y === y);
+    const existingTower = gameState.current.towers.find(t => t.x === x && t.y === y);
 
-    if (!isPath && !hasTower && selectedTower) {
-      const cost = TOWER_STATS[selectedTower].cost;
-      if (gameState.current.money >= cost) {
-        gameState.current.money -= cost;
-        gameState.current.towers.push({
-          id: Math.random().toString(),
-          type: selectedTower,
-          x,
-          y,
-          level: 1,
-          cooldown: 0,
-          range: TOWER_STATS[selectedTower].range,
-          damage: TOWER_STATS[selectedTower].damage,
-          targetId: null,
-          angle: 0
-        });
-        // FORCE RENDER to update UI immediately
+    if (!isPath) {
+      if (selectedTower && !existingTower) {
+        // Place Tower
+        const cost = TOWER_STATS[selectedTower].cost;
+        if (gameState.current.money >= cost) {
+          gameState.current.money -= cost;
+          gameState.current.towers.push({
+            id: Math.random().toString(),
+            type: selectedTower,
+            x,
+            y,
+            level: 1,
+            cooldown: 0,
+            range: TOWER_STATS[selectedTower].range,
+            damage: TOWER_STATS[selectedTower].damage,
+            targetId: null,
+            angle: 0
+          });
+          setSelectedTower(null); // Deselect after build
+          setRenderTrigger(prev => prev + 1);
+        }
+      } else if (existingTower) {
+        // Select Existing Tower
+        if (selectedTower) setSelectedTower(null); // Cancel placement if clicking a tower
+        setSelectedTowerId(existingTower.id);
         setRenderTrigger(prev => prev + 1);
-        // Do NOT deselect tower to allow multi-placement
-        // setSelectedTower(null); 
+        return;
+      } else {
+         // Clicked empty space
+         setSelectedTowerId(null);
+         setRenderTrigger(prev => prev + 1);
       }
     }
   };
 
-  const togglePause = () => {
-    gameState.current.isPlaying = !gameState.current.isPlaying;
-    // Force render to update play/pause icon
+  const handleUpgrade = (towerId: string) => {
+    const tower = gameState.current.towers.find(t => t.id === towerId);
+    if (!tower) return;
+    if (tower.level >= MAX_TOWER_LEVEL) return;
+
+    const baseCost = TOWER_STATS[tower.type].cost;
+    // Simple cost formula: Base * 0.75 * Level
+    const upgradeCost = Math.floor(baseCost * 0.75 * tower.level);
+
+    if (gameState.current.money >= upgradeCost) {
+      gameState.current.money -= upgradeCost;
+      tower.level += 1;
+      
+      // Update Stats
+      const baseStats = TOWER_STATS[tower.type];
+      
+      // Multipliers
+      // Lvl 2: 1.5x Dmg, +0.5 Range
+      // Lvl 3: 2.25x Dmg, +1.0 Range
+      const dmgMult = Math.pow(1.5, tower.level - 1);
+      const rangeAdd = 0.5 * (tower.level - 1);
+
+      tower.damage = Math.floor(baseStats.damage * dmgMult);
+      tower.range = baseStats.range + rangeAdd;
+      
+      setRenderTrigger(prev => prev + 1);
+    }
+  };
+
+  const handleSell = (towerId: string) => {
+    const towerIndex = gameState.current.towers.findIndex(t => t.id === towerId);
+    if (towerIndex === -1) return;
+    
+    const tower = gameState.current.towers[towerIndex];
+    const baseCost = TOWER_STATS[tower.type].cost;
+    // Refund: 50% of base cost + 50% of upgrade costs approx
+    // Simplified: 50% of (Base * Level)
+    const refund = Math.floor((baseCost * tower.level) * 0.5);
+    
+    gameState.current.money += refund;
+    gameState.current.towers.splice(towerIndex, 1);
+    setSelectedTowerId(null);
     setRenderTrigger(prev => prev + 1);
   };
+
+  const togglePause = () => {
+    gameState.current.isPlaying = !gameState.current.isPlaying;
+    setRenderTrigger(prev => prev + 1);
+  };
+
+  const handleTowerSelectionFromMenu = (type: TowerType) => {
+    setSelectedTower(type);
+    setSelectedTowerId(null); // Deselect any active tower
+  }
 
   // Rendering Helpers
   const getCellClass = (x: number, y: number) => {
@@ -335,6 +409,9 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
     if (isPath) return "bg-amber-900/30 border-amber-800/20";
     return "bg-transparent hover:bg-white/10 cursor-pointer pointer-events-auto";
   };
+
+  // Get currently selected tower object
+  const activeTower = selectedTowerId ? gameState.current.towers.find(t => t.id === selectedTowerId) : null;
 
   return (
     <div className="relative w-full max-w-5xl mx-auto p-4 select-none">
@@ -389,6 +466,19 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
             />
          </svg>
 
+         {/* Range Indicator for Active Tower - z-5 */}
+         {activeTower && (
+            <div 
+              className="absolute rounded-full border-2 border-white/30 bg-white/5 pointer-events-none z-0 transition-all duration-200"
+              style={{
+                width: activeTower.range * 2 * CELL_SIZE,
+                height: activeTower.range * 2 * CELL_SIZE,
+                left: (activeTower.x + 0.5) * CELL_SIZE - (activeTower.range * CELL_SIZE),
+                top: (activeTower.y + 0.5) * CELL_SIZE - (activeTower.range * CELL_SIZE),
+              }}
+            />
+         )}
+
          {/* Start and End Markers - z-0 */}
          <div className="absolute flex items-center justify-center font-bold text-xs text-white bg-green-600 rounded-full z-0 shadow-lg"
               style={{ width: CELL_SIZE*0.8, height: CELL_SIZE*0.8, left: gameState.current.level.path[0].x * CELL_SIZE + CELL_SIZE*0.1, top: gameState.current.level.path[0].y * CELL_SIZE + CELL_SIZE*0.1 }}>
@@ -434,31 +524,76 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
         ))}
 
         {/* Towers - z-20 */}
-        {gameState.current.towers.map(tower => (
-          <div
-            key={tower.id}
-            className={`absolute flex items-center justify-center z-20 pointer-events-none`}
-            style={{
-              width: CELL_SIZE,
-              height: CELL_SIZE,
-              left: tower.x * CELL_SIZE,
-              top: tower.y * CELL_SIZE,
-            }}
-          >
-            <div className={`relative w-10 h-10 rounded-lg shadow-lg border-b-4 border-black/20 ${TOWER_STATS[tower.type].color} flex items-center justify-center`}>
-               {/* Turret Head rotates */}
-               <div className="w-full h-full absolute inset-0 flex items-center justify-center transition-transform duration-75"
-                    style={{ transform: `rotate(${tower.angle}deg)` }}>
-                   {tower.type === TowerType.BOTTLE && <div className="w-4 h-8 bg-green-700 rounded-full border-2 border-green-300" />}
-                   {tower.type === TowerType.POOP && <div className="w-8 h-8 bg-yellow-900 rounded-full border-2 border-yellow-600" />}
-                   {tower.type === TowerType.FAN && <div className="w-10 h-2 bg-blue-200 absolute" />}
-                   {tower.type === TowerType.STAR && <Star className="w-8 h-8 text-pink-200 fill-current" />}
-               </div>
-               {/* Base */}
-               <div className="absolute -bottom-1 w-8 h-1 bg-black/30 rounded-full blur-sm" />
+        {gameState.current.towers.map(tower => {
+           const isSelected = selectedTowerId === tower.id;
+           return (
+            <div
+              key={tower.id}
+              className={`absolute flex items-center justify-center z-20 pointer-events-none transition-transform duration-200 ${isSelected ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : ''}`}
+              style={{
+                width: CELL_SIZE,
+                height: CELL_SIZE,
+                left: tower.x * CELL_SIZE,
+                top: tower.y * CELL_SIZE,
+              }}
+            >
+              <div className={`relative w-10 h-10 rounded-lg shadow-lg border-b-4 border-black/20 ${TOWER_STATS[tower.type].color} flex items-center justify-center`}>
+                {/* Level Indicator Badges */}
+                {tower.level >= 2 && <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border border-black/20 z-10" />}
+                {tower.level >= 3 && <div className="absolute -top-1 -left-1 w-3 h-3 bg-yellow-400 rounded-full border border-black/20 z-10" />}
+
+                {/* Turret Head rotates */}
+                <div className="w-full h-full absolute inset-0 flex items-center justify-center transition-transform duration-75"
+                      style={{ transform: `rotate(${tower.angle}deg)` }}>
+                    {tower.type === TowerType.BOTTLE && <div className="w-4 h-8 bg-green-700 rounded-full border-2 border-green-300" />}
+                    {tower.type === TowerType.POOP && <div className="w-8 h-8 bg-yellow-900 rounded-full border-2 border-yellow-600" />}
+                    {tower.type === TowerType.FAN && <div className="w-10 h-2 bg-blue-200 absolute" />}
+                    {tower.type === TowerType.STAR && <Star className="w-8 h-8 text-pink-200 fill-current" />}
+                </div>
+                {/* Base */}
+                <div className="absolute -bottom-1 w-8 h-1 bg-black/30 rounded-full blur-sm" />
+              </div>
+
+              {/* In-World Upgrade Menu (Floating above tower when selected) */}
+              {isSelected && (
+                 <div className="absolute bottom-full mb-2 pointer-events-auto flex flex-col items-center z-50 animate-pop gap-2">
+                    
+                    {/* Sell Button */}
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleSell(tower.id); }}
+                      className="flex items-center space-x-1 bg-red-600 hover:bg-red-500 text-white text-xs font-bold py-1 px-2 rounded shadow-lg border border-red-400"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>{Math.floor(TOWER_STATS[tower.type].cost * tower.level * 0.5)}</span>
+                    </button>
+
+                    {/* Upgrade Button */}
+                    {tower.level < MAX_TOWER_LEVEL ? (
+                      <button 
+                         onClick={(e) => { e.stopPropagation(); handleUpgrade(tower.id); }}
+                         className={`flex items-center space-x-1 text-xs font-bold py-1 px-2 rounded shadow-lg border transition-all ${
+                           gameState.current.money >= Math.floor(TOWER_STATS[tower.type].cost * 0.75 * tower.level)
+                             ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-400'
+                             : 'bg-slate-700 text-slate-400 border-slate-600 cursor-not-allowed'
+                         }`}
+                      >
+                         <ArrowUpCircle className="w-3 h-3" />
+                         <div className="flex flex-col leading-none items-start">
+                           <span>LVL {tower.level + 1}</span>
+                           <span className="text-[10px] opacity-80 flex items-center gap-0.5">
+                             <Coins className="w-2 h-2" />
+                             {Math.floor(TOWER_STATS[tower.type].cost * 0.75 * tower.level)}
+                           </span>
+                         </div>
+                      </button>
+                    ) : (
+                      <div className="bg-slate-800 text-yellow-400 text-[10px] px-2 py-1 rounded font-bold border border-yellow-500/30">MAX LEVEL</div>
+                    )}
+                 </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* Enemies - z-30 */}
         {gameState.current.enemies.map(enemy => (
@@ -532,7 +667,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
           return (
             <button
               key={type}
-              onClick={() => setSelectedTower(type)}
+              onClick={() => handleTowerSelectionFromMenu(type)}
               disabled={!canAfford}
               className={`
                 relative group flex flex-col items-center p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer

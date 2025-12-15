@@ -4,6 +4,7 @@ export const CELL_SIZE = 60; // Pixels
 export const GRID_WIDTH = 12;
 export const GRID_HEIGHT = 8;
 export const FPS = 60;
+export const MAX_TOWER_LEVEL = 3;
 
 export const TOWER_STATS: Record<TowerType, { name: string; cost: number; range: number; damage: number; speed: number; description: string; color: string }> = {
   [TowerType.BOTTLE]: {
