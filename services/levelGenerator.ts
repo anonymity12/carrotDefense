@@ -1,9 +1,7 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { GRID_WIDTH, GRID_HEIGHT, DEFAULT_LEVEL_PATH, DEFAULT_WAVES } from '../constants';
 import { GameLevel, Position, EnemyType } from '../types';
-
-// IMPORTANT: Do not use SchemaType or other deprecated types.
-// Use Type enum from @google/genai
 
 export const generateLevel = async (theme: string): Promise<GameLevel> => {
   const apiKey = process.env.API_KEY;
@@ -16,19 +14,23 @@ export const generateLevel = async (theme: string): Promise<GameLevel> => {
   const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `
-    Create a Tower Defense level layout and wave configuration.
+    Create a 'Tower Defense' style Traffic Control simulation level.
     Grid Size: ${GRID_WIDTH}x${GRID_HEIGHT}.
     Theme: "${theme}".
+    The goal is to intercept illegal motorcycles on a road network.
     
     Requirements:
-    1. 'path': An ordered array of coordinates {x, y} representing the monster path.
+    1. 'path': An ordered array of coordinates {x, y} representing the road.
        - Must start at x=0.
        - Must end at x=${GRID_WIDTH - 1}.
-       - Must be contiguous (each step is adjacent to the previous one, no diagonals).
+       - Must be contiguous (no diagonals).
        - Must not intersect itself.
-       - Should be reasonably long/winding for a fun game.
     2. 'waves': An array of 3 wave configurations.
-       - Use enemy types: SLIME (weak), GOBBLE (tank), FLY (fast), BOSS (boss).
+       - Enemy Types to use: 
+         - SCOOTER (Basic violator)
+         - DELIVERY (Heavy load, tanky)
+         - RACER (High speed, speeding)
+         - MODIFIED (Illegal mods, Boss)
        - Define count and spawn interval for each group.
   `;
 
@@ -62,7 +64,7 @@ export const generateLevel = async (theme: string): Promise<GameLevel> => {
                     items: {
                       type: Type.OBJECT,
                       properties: {
-                        type: { type: Type.STRING, enum: ["SLIME", "GOBBLE", "FLY", "BOSS"] },
+                        type: { type: Type.STRING, enum: ["SCOOTER", "DELIVERY", "RACER", "MODIFIED"] },
                         count: { type: Type.INTEGER },
                         interval: { type: Type.INTEGER }
                       },
@@ -85,13 +87,12 @@ export const generateLevel = async (theme: string): Promise<GameLevel> => {
 
     return {
       id: `gen-${Date.now()}`,
-      name: data.levelName || "AI Generated Zone",
+      name: data.levelName || "Traffic Control Zone",
       gridWidth: GRID_WIDTH,
       gridHeight: GRID_HEIGHT,
       path: data.path,
       waves: data.waves.map((w: any) => ({
         ...w,
-        // Map string enum back to strict EnemyType if needed, mostly matches directly
         enemies: w.enemies.map((e: any) => ({
           ...e,
           type: e.type as EnemyType
@@ -108,7 +109,7 @@ export const generateLevel = async (theme: string): Promise<GameLevel> => {
 
 const createDefaultLevel = (): GameLevel => ({
   id: 'default',
-  name: 'Carrot Plains',
+  name: 'City Ring Road',
   gridWidth: GRID_WIDTH,
   gridHeight: GRID_HEIGHT,
   path: DEFAULT_LEVEL_PATH,

@@ -1,5 +1,5 @@
 {
-  "name": "Gemini Defense: Carrot Fantasy",
-  "description": "A Tower Defense game inspired by Carrot Fantasy. Protect the core from waves of monsters! Features AI-generated levels powered by Google Gemini.",
+  "name": "Traffic Guard: Zang Overpass",
+  "description": "A Traffic Defense game. Deploy police units to stop illegal motorcycles from reaching Zang Overpass! Features AI-generated traffic scenarios powered by Google Gemini.",
   "requestFramePermissions": []
 }

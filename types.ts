@@ -1,15 +1,16 @@
+
 export enum TowerType {
-  BOTTLE = 'BOTTLE', // Basic, fast
-  FAN = 'FAN', // Splash/Multi-target
-  POOP = 'POOP', // Slows enemies
-  STAR = 'STAR', // High damage, slow fire
+  AUXILIARY = 'AUXILIARY', // Basic, fast (Bottle)
+  PATROL = 'PATROL',       // Splash/Multi-target (Fan)
+  TRAFFIC = 'TRAFFIC',     // Slows enemies (Poop)
+  SWAT = 'SWAT',           // High damage, slow fire (Star)
 }
 
 export enum EnemyType {
-  SLIME = 'SLIME', // Weak, fast
-  GOBBLE = 'GOBBLE', // Tanky, slow
-  FLY = 'FLY', // Very fast, low HP
-  BOSS = 'BOSS', // Very Tanky
+  SCOOTER = 'SCOOTER',   // No Helmet (Slime)
+  DELIVERY = 'DELIVERY', // No License (Gobble)
+  RACER = 'RACER',       // Speeding (Fly)
+  MODIFIED = 'MODIFIED', // Boss
 }
 
 export interface Position {

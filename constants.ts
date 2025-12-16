@@ -1,3 +1,4 @@
+
 import { EnemyType, TowerType, WaveConfig } from './types';
 
 export const CELL_SIZE = 60; // Pixels
@@ -7,49 +8,49 @@ export const FPS = 60;
 export const MAX_TOWER_LEVEL = 3;
 
 export const TOWER_STATS: Record<TowerType, { name: string; cost: number; range: number; damage: number; speed: number; description: string; color: string }> = {
-  [TowerType.BOTTLE]: {
-    name: 'Bottle',
+  [TowerType.AUXILIARY]: {
+    name: 'Auxiliary',
     cost: 100,
     range: 2.5, // Grid cells
     damage: 20,
     speed: 30, // Frames per shot (lower is faster)
-    description: 'Basic turret. Fast firing.',
-    color: 'bg-green-500'
+    description: 'Rookie unit. Blowing whistles fast.',
+    color: 'bg-blue-500'
   },
-  [TowerType.POOP]: {
-    name: 'Gloop',
+  [TowerType.TRAFFIC]: {
+    name: 'Traffic Cop',
     cost: 180,
     range: 2,
     damage: 5,
     speed: 45,
-    description: 'Slows down enemies.',
-    color: 'bg-yellow-700'
+    description: 'Checks licenses. Slows bikes down.',
+    color: 'bg-yellow-500'
   },
-  [TowerType.FAN]: {
-    name: 'Fan',
+  [TowerType.PATROL]: {
+    name: 'Iron Patrol',
     cost: 250,
     range: 3,
     damage: 15,
     speed: 40,
-    description: 'Splashes damage to nearby.',
-    color: 'bg-blue-400'
+    description: 'Motorcycle unit. Area control.',
+    color: 'bg-cyan-600'
   },
-  [TowerType.STAR]: {
-    name: 'Star',
+  [TowerType.SWAT]: {
+    name: 'SWAT Team',
     cost: 350,
     range: 4,
     damage: 80,
     speed: 90,
-    description: 'High damage sniper.',
-    color: 'bg-pink-500'
+    description: 'Heavy enforcement. High impact.',
+    color: 'bg-slate-800'
   },
 };
 
-export const ENEMY_STATS: Record<EnemyType, { hp: number; speed: number; reward: number; color: string }> = {
-  [EnemyType.SLIME]: { hp: 50, speed: 0.04, reward: 15, color: 'bg-lime-400' },
-  [EnemyType.GOBBLE]: { hp: 150, speed: 0.02, reward: 25, color: 'bg-red-500' },
-  [EnemyType.FLY]: { hp: 30, speed: 0.07, reward: 20, color: 'bg-cyan-300' },
-  [EnemyType.BOSS]: { hp: 1000, speed: 0.015, reward: 500, color: 'bg-purple-600' },
+export const ENEMY_STATS: Record<EnemyType, { hp: number; speed: number; reward: number; color: string; label: string }> = {
+  [EnemyType.SCOOTER]: { hp: 50, speed: 0.04, reward: 15, color: 'bg-orange-400', label: 'No Helmet' },
+  [EnemyType.DELIVERY]: { hp: 150, speed: 0.02, reward: 25, color: 'bg-red-500', label: 'No License' },
+  [EnemyType.RACER]: { hp: 30, speed: 0.07, reward: 20, color: 'bg-purple-400', label: 'Speeding' },
+  [EnemyType.MODIFIED]: { hp: 1000, speed: 0.015, reward: 500, color: 'bg-black', label: 'Modded' },
 };
 
 export const DEFAULT_LEVEL_PATH = [
@@ -63,8 +64,8 @@ export const DEFAULT_LEVEL_PATH = [
 ];
 
 export const DEFAULT_WAVES: WaveConfig[] = [
-  { enemies: [{ type: EnemyType.SLIME, count: 5, interval: 60 }], delayBetween: 200 },
-  { enemies: [{ type: EnemyType.SLIME, count: 5, interval: 40 }, { type: EnemyType.GOBBLE, count: 2, interval: 80 }], delayBetween: 300 },
-  { enemies: [{ type: EnemyType.FLY, count: 10, interval: 30 }], delayBetween: 300 },
-  { enemies: [{ type: EnemyType.GOBBLE, count: 5, interval: 60 }, { type: EnemyType.BOSS, count: 1, interval: 100 }], delayBetween: 0 },
+  { enemies: [{ type: EnemyType.SCOOTER, count: 5, interval: 60 }], delayBetween: 200 },
+  { enemies: [{ type: EnemyType.SCOOTER, count: 5, interval: 40 }, { type: EnemyType.DELIVERY, count: 2, interval: 80 }], delayBetween: 300 },
+  { enemies: [{ type: EnemyType.RACER, count: 10, interval: 30 }], delayBetween: 300 },
+  { enemies: [{ type: EnemyType.DELIVERY, count: 5, interval: 60 }, { type: EnemyType.MODIFIED, count: 1, interval: 100 }], delayBetween: 0 },
 ];
