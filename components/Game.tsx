@@ -547,7 +547,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
              <button onClick={onExit} className={`bg-red-900/80 border border-red-800 rounded-lg hover:bg-red-800 font-bold transition ${
                isMobile ? 'px-2 py-1 text-[10px]' : 'px-4 py-2 text-sm'
              }`}>
-               {isMobile ? 'EXIT' : 'ABORT'}
+               {isMobile ? '退出' : '退出'}
              </button>
            </div>
         </div>
@@ -560,13 +560,13 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
              isMobile ? 'text-xs' : 'text-xl'
            }`}>
              <Coins className={`mr-1 ${isMobile ? 'w-3 h-3' : 'w-6 h-6'}`} />
-             {isMobile ? Math.floor(gameState.current.money) : `BUDGET: ${Math.floor(gameState.current.money)}`}
+             {isMobile ? Math.floor(gameState.current.money) : `预算: ${Math.floor(gameState.current.money)}`}
            </div>
            <div className={`flex items-center text-blue-400 font-bold font-mono ${
              isMobile ? 'text-xs' : 'text-xl'
            }`}>
              <Heart className={`mr-1 ${isMobile ? 'w-3 h-3' : 'w-6 h-6'}`} />
-             {isMobile ? gameState.current.lives : `SAFETY: ${gameState.current.lives}`}
+             {isMobile ? gameState.current.lives : `安全度: ${gameState.current.lives}`}
            </div>
            <div className={`flex items-center text-slate-300 font-bold font-mono ${
              isMobile ? 'text-xs' : 'text-xl'
@@ -653,7 +653,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
               }}>
             <div className={`bg-green-600 text-white px-1 rounded font-bold mb-1 ${
               isMobile ? 'text-[8px]' : 'text-[10px]'
-            }`}>ENTRY</div>
+            }`}>入口</div>
             <ArrowUpCircle className={`text-green-500 ${
               isMobile ? 'w-6 h-6' : 'w-8 h-8'
             }`} />
@@ -676,7 +676,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
                <div className={`bg-blue-600 border-2 border-white text-white font-bold px-1 rounded shadow-lg z-10 -mt-4 whitespace-nowrap ${
                  isMobile ? 'text-[6px]' : 'text-[8px]'
                }`}>
-                 {isMobile ? 'ZANG' : 'ZANG OVERPASS'}
+                 {isMobile ? '川藏' : '川藏立交'}
                </div>
                <div className={`bg-slate-700 rounded-t-lg border-x-4 border-slate-500 mt-1 relative overflow-hidden flex justify-center ${
                  isMobile ? 'w-8 h-6 border-x-2' : 'w-12 h-8'
@@ -815,7 +815,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
                       <div className={`text-yellow-400 font-bold ${
                         isMobile ? 'text-sm' : 'text-[10px]'
                       }`}>
-                        MAX RANK
+                        最高等级
                       </div>
                     )}
                  </div>
@@ -912,16 +912,16 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
         {(gameState.current.isGameOver || gameState.current.isVictory) && (
            <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center z-50 animate-pop">
               <h2 className={`text-5xl font-black mb-6 tracking-tighter ${gameState.current.isVictory ? 'text-blue-400' : 'text-red-500'}`}>
-                {gameState.current.isVictory ? 'OPERATION SUCCESS' : 'TRAFFIC FAILURE'}
+                {gameState.current.isVictory ? '行动成功' : '交通瘫痪'}
               </h2>
               <div className="bg-slate-800 p-8 rounded-xl border border-slate-600 shadow-2xl text-center max-w-md">
                  <p className="text-xl text-slate-300 mb-8 font-light">
                    {gameState.current.isVictory 
-                     ? "Zang Overpass is secure. All violators have been processed." 
-                     : "Too many illegal vehicles crossed the overpass. The city is in chaos!"}
+                     ? "川藏立交安全。所有违规者已被处理。" 
+                     : "太多非法车辆穿过立交桥。城市陷入混乱！"}
                  </p>
                  <button onClick={onRestart} className="w-full px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xl shadow-lg transition transform hover:scale-105">
-                   RESTART MISSION
+                   重新开始任务
                  </button>
               </div>
            </div>

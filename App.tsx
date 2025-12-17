@@ -47,7 +47,7 @@ const App: React.FC = () => {
       const newLevel = await generateLevel(prompt, isMobile);
       setLevel(newLevel);
     } catch (e) {
-      setError("Failed to generate operation map. Check connection.");
+      setError("生成行动地图失败。请检查网络连接。");
     } finally {
       setLoading(false);
     }
@@ -104,12 +104,12 @@ const App: React.FC = () => {
                 ? 'text-3xl mb-2' 
                 : 'text-6xl mb-4'
             }`}>
-              TRAFFIC <span className="text-blue-500">GUARD</span>
+              摩法交通 <span className="text-blue-500">卫士</span>
             </h1>
             <p className={`text-slate-400 max-w-xl mx-auto ${
               isMobile ? 'text-sm px-2' : 'text-xl'
             }`}>
-              Command the checkpoint. Stop illegal motorcycles from crossing <span className="text-yellow-400 font-bold">Zang Overpass</span>.
+              部署千军万马。阻止飙车,炸街,无证人员穿越 <span className="text-yellow-400 font-bold">川藏立交</span>。
             </p>
          </div>
 
@@ -138,11 +138,11 @@ const App: React.FC = () => {
                  </div>
                  <h3 className={`font-bold text-white ${
                    isMobile ? 'text-lg mb-1' : 'text-2xl mb-2'
-                 }`}>Zang Overpass</h3>
+                 }`}>川藏立交</h3>
                  <p className={`text-slate-400 ${
                    isMobile ? 'text-xs' : 'text-sm'
                  }`}>
-                   Deploy units to the main overpass. High traffic volume expected. Check helmets and licenses.
+                   在成都西部主要立交桥完成队伍部署!预计交通流量大,请着重检查头盔和驾照。
                  </p>
                </div>
             </div>
@@ -166,18 +166,18 @@ const App: React.FC = () => {
                  </div>
                  <h3 className={`font-bold ${
                    isMobile ? 'text-lg mb-1' : 'text-2xl mb-2'
-                 }`}>Simulate Operation</h3>
+                 }`}>模拟行动</h3>
                  <p className={`text-indigo-200/60 uppercase tracking-wider ${
                    isMobile ? 'text-[10px] mb-2' : 'text-xs mb-4'
-                 }`}>Powered by Gemini AI</p>
+                 }`}>由 Gemini AI 提供支持</p>
                  
                  <div className="space-y-3">
                     <textarea 
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
                       placeholder={isMobile 
-                        ? "Describe traffic situation..."
-                        : "Describe the traffic situation (e.g., 'Rainy night, massive wave of speeding racers')"
+                        ? "描述交通状况..."
+                        : "描述交通状况 (例如：'雨夜，大量超速赛车手')"
                       }
                       className={`w-full bg-black/30 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-400 transition resize-none ${
                         isMobile ? 'p-2 text-xs h-16' : 'p-3 text-sm h-24'
@@ -192,14 +192,14 @@ const App: React.FC = () => {
                     >
                       {loading ? (
                         <span className="animate-pulse">
-                          {isMobile ? 'Analyzing...' : 'Analyzing Traffic...'}
+                          {isMobile ? '分析中...' : '分析交通状况...'}
                         </span>
                       ) : (
                         <>
                           <Siren className={`mr-2 ${
                             isMobile ? 'w-3 h-3' : 'w-4 h-4'
                           }`} />
-                          {isMobile ? 'Simulate' : 'Start Simulation'}
+                          {isMobile ? '开始模拟' : '开始模拟'}
                         </>
                       )}
                     </button>
@@ -223,7 +223,7 @@ const App: React.FC = () => {
              ? 'mt-8 text-[10px] px-2' 
              : 'mt-16 text-xs'
          }`}>
-           City Traffic Control System v2.5{!isMobile && ' • Authorized Personnel Only'}
+           城市交通控制系统 v2.5{!isMobile && ' • 仅限授权人员'}
          </div>
        </div>
     </div>

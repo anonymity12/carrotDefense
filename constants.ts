@@ -37,48 +37,48 @@ export const MAX_TOWER_LEVEL = 3;
 
 export const TOWER_STATS: Record<TowerType, { name: string; cost: number; range: number; damage: number; speed: number; description: string; color: string }> = {
   [TowerType.AUXILIARY]: {
-    name: 'Auxiliary',
+    name: '辅警',
     cost: 100,
     range: 2.5, // Grid cells
     damage: 20,
     speed: 30, // Frames per shot (lower is faster)
-    description: 'Rookie unit. Blowing whistles fast.',
+    description: '新手单位。吹哨速度快。',
     color: 'bg-blue-500'
   },
   [TowerType.TRAFFIC]: {
-    name: 'Traffic Cop',
+    name: '交警',
     cost: 180,
     range: 2,
     damage: 5,
     speed: 45,
-    description: 'Checks licenses. Slows bikes down.',
+    description: '检查驾照。减缓车辆速度。',
     color: 'bg-yellow-500'
   },
   [TowerType.PATROL]: {
-    name: 'Iron Patrol',
+    name: '铁骑',
     cost: 250,
     range: 3,
     damage: 15,
     speed: 40,
-    description: 'Motorcycle unit. Area control.',
+    description: '摩托车单位。区域控制。',
     color: 'bg-cyan-600'
   },
   [TowerType.SWAT]: {
-    name: 'SWAT Team',
+    name: '特警',
     cost: 350,
     range: 4,
     damage: 80,
     speed: 90,
-    description: 'Heavy enforcement. High impact.',
+    description: '强力执法。高冲击力。',
     color: 'bg-slate-800'
   },
 };
 
 export const ENEMY_STATS: Record<EnemyType, { hp: number; speed: number; reward: number; color: string; label: string }> = {
-  [EnemyType.SCOOTER]: { hp: 50, speed: 0.02, reward: 15, color: 'bg-orange-400', label: 'No Helmet' },
-  [EnemyType.DELIVERY]: { hp: 150, speed: 0.01, reward: 25, color: 'bg-red-500', label: 'No License' },
-  [EnemyType.RACER]: { hp: 30, speed: 0.035, reward: 20, color: 'bg-purple-400', label: 'Speeding' },
-  [EnemyType.MODIFIED]: { hp: 1000, speed: 0.008, reward: 500, color: 'bg-black', label: 'Modded' },
+  [EnemyType.SCOOTER]: { hp: 50, speed: 0.02, reward: 15, color: 'bg-orange-400', label: '无头盔' },
+  [EnemyType.DELIVERY]: { hp: 150, speed: 0.01, reward: 25, color: 'bg-red-500', label: '无证' },
+  [EnemyType.RACER]: { hp: 30, speed: 0.035, reward: 20, color: 'bg-purple-400', label: '超速' },
+  [EnemyType.MODIFIED]: { hp: 1000, speed: 0.008, reward: 500, color: 'bg-black', label: '改装' },
 };
 
 export const DEFAULT_LEVEL_PATH = [
