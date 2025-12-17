@@ -2,11 +2,10 @@
 import React, { useState } from 'react';
 import Game from './components/Game';
 import { GameLevel } from './types';
-import { generateLevel } from './services/levelGenerator';
-import { DEFAULT_LEVEL_PATH, DEFAULT_MOBILE_LEVEL_PATH, DEFAULT_WAVES, GRID_HEIGHT, GRID_WIDTH, MOBILE_GRID_HEIGHT, MOBILE_GRID_WIDTH } from './constants';
-import { Siren, Bot, ArrowRight, ShieldCheck, AlertCircle, MapPin } from 'lucide-react';
+import { DEFAULT_LEVEL_PATH, DEFAULT_MOBILE_LEVEL_PATH, NANHU_LEVEL_PATH, NANHU_MOBILE_LEVEL_PATH, DEFAULT_WAVES, GRID_HEIGHT, GRID_WIDTH, MOBILE_GRID_HEIGHT, MOBILE_GRID_WIDTH } from './constants';
+import { Siren, ArrowRight, MapPin, Building2 } from 'lucide-react';
 
-const getDefaultLevel = (isMobile: boolean): GameLevel => ({
+const getChuanzangLevel = (isMobile: boolean): GameLevel => ({
   id: 'lvl-1',
   name: '保卫川藏立交',
   gridWidth: isMobile ? MOBILE_GRID_WIDTH : GRID_WIDTH,
@@ -16,11 +15,18 @@ const getDefaultLevel = (isMobile: boolean): GameLevel => ({
   startingMoney: 450
 });
 
+const getNanhuLevel = (isMobile: boolean): GameLevel => ({
+  id: 'lvl-2',
+  name: '守护南湖立交',
+  gridWidth: isMobile ? MOBILE_GRID_WIDTH : GRID_WIDTH,
+  gridHeight: isMobile ? MOBILE_GRID_HEIGHT : GRID_HEIGHT,
+  path: isMobile ? NANHU_MOBILE_LEVEL_PATH : NANHU_LEVEL_PATH,
+  waves: DEFAULT_WAVES, // 可以复用波次配置，或者定义新的
+  startingMoney: 500
+});
+
 const App: React.FC = () => {
   const [level, setLevel] = useState<GameLevel | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [prompt, setPrompt] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   
   // 移动端检测
@@ -34,24 +40,14 @@ const App: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleStartDefault = () => {
-    setLevel(getDefaultLevel(isMobile));
+  const handleStartChuanzang = () => {
+    setLevel(getChuanzangLevel(isMobile));
   };
 
-  const handleGenerateLevel = async () => {
-    if (!prompt.trim()) return;
-    
-    setLoading(true);
-    setError(null);
-    try {
-      const newLevel = await generateLevel(prompt, isMobile);
-      setLevel(newLevel);
-    } catch (e) {
-      setError("生成行动地图失败。请检查网络连接。");
-    } finally {
-      setLoading(false);
-    }
+  const handleStartNanhu = () => {
+    setLevel(getNanhuLevel(isMobile));
   };
+
 
   if (level) {
     return (
@@ -116,10 +112,10 @@ const App: React.FC = () => {
          <div className={`grid gap-6 ${
            isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
          }`}>
-            {/* Campaign Card */}
+            {/* Campaign Card: Chuanzang */}
             <div className={`group relative bg-slate-900 border border-slate-700 hover:border-blue-500 rounded-xl transition-all cursor-pointer overflow-hidden active:scale-95 ${
               isMobile ? 'p-4' : 'p-8'
-            }`} onClick={handleStartDefault}>
+            }`} onClick={handleStartChuanzang}>
                <div className="absolute inset-0 bg-blue-600/5 group-hover:bg-blue-600/10 transition"></div>
                <div className="relative z-10">
                  <div className={`flex justify-between items-start ${
@@ -147,73 +143,34 @@ const App: React.FC = () => {
                </div>
             </div>
 
-            {/* AI Generator Card */}
-            <div className={`relative bg-slate-900 border border-slate-700 rounded-xl overflow-hidden ${
+            {/* Campaign Card: Nanhu */}
+            <div className={`group relative bg-slate-900 border border-slate-700 hover:border-purple-500 rounded-xl transition-all cursor-pointer overflow-hidden active:scale-95 ${
               isMobile ? 'p-4' : 'p-8'
-            }`}>
-               <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/20 to-purple-900/20"></div>
+            }`} onClick={handleStartNanhu}>
+               <div className="absolute inset-0 bg-purple-600/5 group-hover:bg-purple-600/10 transition"></div>
                <div className="relative z-10">
                  <div className={`flex justify-between items-start ${
                    isMobile ? 'mb-3' : 'mb-6'
                  }`}>
-                    <div className={`bg-indigo-900/50 rounded-lg border border-indigo-500/30 ${
+                    <div className={`bg-slate-800 rounded-lg border border-slate-600 group-hover:border-purple-500/50 transition ${
                       isMobile ? 'p-2' : 'p-3'
                     }`}>
-                      <Bot className={`text-indigo-300 ${
+                      <Building2 className={`text-purple-400 ${
                         isMobile ? 'w-5 h-5' : 'w-6 h-6'
                       }`} />
                     </div>
+                    <ArrowRight className={`text-slate-500 group-hover:text-white transition ${
+                      isMobile ? 'w-4 h-4' : 'w-5 h-5'
+                    }`} />
                  </div>
-                 <h3 className={`font-bold ${
+                 <h3 className={`font-bold text-white ${
                    isMobile ? 'text-lg mb-1' : 'text-2xl mb-2'
-                 }`}>模拟行动</h3>
-                 <p className={`text-indigo-200/60 uppercase tracking-wider ${
-                   isMobile ? 'text-[10px] mb-2' : 'text-xs mb-4'
-                 }`}>由 Gemini AI 提供支持</p>
-                 
-                 <div className="space-y-3">
-                    <textarea 
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      placeholder={isMobile 
-                        ? "描述交通状况..."
-                        : "描述交通状况 (例如：'雨夜，大量超速赛车手')"
-                      }
-                      className={`w-full bg-black/30 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-400 transition resize-none ${
-                        isMobile ? 'p-2 text-xs h-16' : 'p-3 text-sm h-24'
-                      }`}
-                    />
-                    <button 
-                      onClick={handleGenerateLevel}
-                      disabled={loading || !prompt.trim()}
-                      className={`w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold shadow-lg transition flex items-center justify-center text-white ${
-                        isMobile ? 'py-2 text-sm' : 'py-3'
-                      }`}
-                    >
-                      {loading ? (
-                        <span className="animate-pulse">
-                          {isMobile ? '分析中...' : '分析交通状况...'}
-                        </span>
-                      ) : (
-                        <>
-                          <Siren className={`mr-2 ${
-                            isMobile ? 'w-3 h-3' : 'w-4 h-4'
-                          }`} />
-                          {isMobile ? '开始模拟' : '开始模拟'}
-                        </>
-                      )}
-                    </button>
-                    {error && (
-                      <div className={`flex items-center text-red-400 bg-red-900/20 rounded ${
-                        isMobile ? 'text-xs mt-2 p-2' : 'text-xs mt-2 p-2'
-                      }`}>
-                        <AlertCircle className={`mr-1 ${
-                          isMobile ? 'w-3 h-3' : 'w-3 h-3'
-                        }`} />
-                        {error}
-                      </div>
-                    )}
-                 </div>
+                 }`}>南湖立交</h3>
+                 <p className={`text-slate-400 ${
+                   isMobile ? 'text-xs' : 'text-sm'
+                 }`}>
+                   城南重要交通枢纽。夜间飙车族活动频繁。需要加强巡逻和拦截。
+                 </p>
                </div>
             </div>
          </div>
