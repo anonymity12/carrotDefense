@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { 
   Zap, 
   Wind, 
@@ -19,9 +19,11 @@ import {
   ArrowUpCircle,
   Megaphone,
   Radio,
-  FileWarning
+  FileWarning,
+  Menu,
+  X
 } from 'lucide-react';
-import { CELL_SIZE, GRID_HEIGHT, GRID_WIDTH, TOWER_STATS, ENEMY_STATS, MAX_TOWER_LEVEL } from '../constants';
+import { CELL_SIZE, calculateCellSize, GRID_HEIGHT, GRID_WIDTH, TOWER_STATS, ENEMY_STATS, MAX_TOWER_LEVEL } from '../constants';
 import { Enemy, EnemyType, GameLevel, GameState, TowerType } from '../types';
 
 // Utility for distance
@@ -33,7 +35,29 @@ interface GameProps {
   onRestart: () => void;
 }
 
+// 响应式hook
+const useResponsiveGame = () => {
+  const [cellSize, setCellSize] = useState(CELL_SIZE);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setIsMobile(width < 768);
+      setCellSize(calculateCellSize());
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  return { cellSize, isMobile };
+};
+
 const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
+  const { cellSize, isMobile } = useResponsiveGame();
+  
   // Game State Ref (Mutable for loop performance)
   const gameState = useRef<GameState>({
     money: level.startingMoney,
@@ -54,6 +78,8 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
   const [selectedTower, setSelectedTower] = useState<TowerType | null>(null); // For placement
   const [selectedTowerId, setSelectedTowerId] = useState<string | null>(null); // For upgrades
   const [hoverCell, setHoverCell] = useState<{x: number, y: number} | null>(null);
+  const [selectedForPreview, setSelectedForPreview] = useState<{x: number, y: number} | null>(null);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Loop Control
   const requestRef = useRef<number>(0);
@@ -110,8 +136,8 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
       type,
       pathIndex: 0,
       progress: 0,
-      x: start.x,
-      y: start.y,
+      x: start.x, // 网格坐标
+      y: start.y, // 网格坐标
       hp: stats.hp,
       maxHp: stats.hp,
       speed: stats.speed,
@@ -158,8 +184,9 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
         if (enemy.frozen <= 0) enemy.frozenFactor = 1;
       }
 
-      // Move
-      const actualSpeed = enemy.speed * enemy.frozenFactor;
+      // Move - 使用相对于网格的速度，根据cellSize调整
+      const speedMultiplier = cellSize / 60; // 基准速度基于60px的网格
+      const actualSpeed = enemy.speed * enemy.frozenFactor * speedMultiplier;
       enemy.progress += actualSpeed;
 
       if (enemy.progress >= 1) {
@@ -177,18 +204,25 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
         }
       }
 
+      // 使用网格坐标系统进行位置计算
       const currentCell = state.level.path[enemy.pathIndex];
-      const nextCell = state.level.path[enemy.pathIndex + 1];
+      const nextCell = state.level.path[Math.min(enemy.pathIndex + 1, state.level.path.length - 1)];
       
-      enemy.x = currentCell.x + (nextCell.x - currentCell.x) * enemy.progress;
-      enemy.y = currentCell.y + (nextCell.y - currentCell.y) * enemy.progress;
+      // 计算在网格坐标系中的位置
+      if (nextCell) {
+        enemy.x = currentCell.x + (nextCell.x - currentCell.x) * enemy.progress;
+        enemy.y = currentCell.y + (nextCell.y - currentCell.y) * enemy.progress;
+      } else {
+        enemy.x = currentCell.x;
+        enemy.y = currentCell.y;
+      }
     }
 
     // 3. Towers
     state.towers.forEach(tower => {
       if (tower.cooldown > 0) tower.cooldown--;
 
-      // Find Target
+      // Find Target - 在网格坐标系中计算距离
       let target: Enemy | null = null;
       let maxDist = tower.range;
       
@@ -202,7 +236,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
       tower.targetId = target ? target.id : null;
 
       if (target && tower.cooldown <= 0) {
-        // Fire
+        // Fire - 在网格坐标系中发射
         const stats = TOWER_STATS[tower.type];
         state.projectiles.push({
           id: Math.random().toString(),
@@ -226,7 +260,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
       }
     });
 
-    // 4. Projectiles
+    // 4. Projectiles - 在网格坐标系中移动
     for (let i = state.projectiles.length - 1; i >= 0; i--) {
       const p = state.projectiles[i];
       const target = state.enemies.find(e => e.id === p.targetId);
@@ -251,6 +285,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
 
         state.projectiles.splice(i, 1);
       } else {
+        // 在网格坐标系中移动
         const angle = Math.atan2(target.y - p.y, target.x - p.x);
         p.x += Math.cos(angle) * p.speed;
         p.y += Math.sin(angle) * p.speed;
@@ -286,8 +321,8 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
     return () => cancelAnimationFrame(requestRef.current);
   }, []);
 
-  // Handlers
-  const handleGridClick = (x: number, y: number) => {
+  // 触控优化的网格点击处理
+  const handleGridClick = useCallback((x: number, y: number) => {
     if (gameState.current.isGameOver) return;
     
     const isPath = gameState.current.level.path.some(p => p.x === x && p.y === y);
@@ -295,35 +330,66 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
 
     if (!isPath) {
       if (selectedTower && !existingTower) {
-        const cost = TOWER_STATS[selectedTower].cost;
-        if (gameState.current.money >= cost) {
-          gameState.current.money -= cost;
-          gameState.current.towers.push({
-            id: Math.random().toString(),
-            type: selectedTower,
-            x,
-            y,
-            level: 1,
-            cooldown: 0,
-            range: TOWER_STATS[selectedTower].range,
-            damage: TOWER_STATS[selectedTower].damage,
-            targetId: null,
-            angle: 0
-          });
-          setSelectedTower(null); 
-          setRenderTrigger(prev => prev + 1);
+        // 移动端两步式操作：预览 -> 确认放置
+        if (isMobile) {
+          if (selectedForPreview?.x === x && selectedForPreview?.y === y) {
+            // 确认放置
+            const cost = TOWER_STATS[selectedTower].cost;
+            if (gameState.current.money >= cost) {
+              gameState.current.money -= cost;
+              gameState.current.towers.push({
+                id: Math.random().toString(),
+                type: selectedTower,
+                x,
+                y,
+                level: 1,
+                cooldown: 0,
+                range: TOWER_STATS[selectedTower].range,
+                damage: TOWER_STATS[selectedTower].damage,
+                targetId: null,
+                angle: 0
+              });
+              setSelectedTower(null);
+              setSelectedForPreview(null);
+            }
+          } else {
+            // 设置预览位置
+            setSelectedForPreview({x, y});
+          }
+        } else {
+          // 桌面端直接放置
+          const cost = TOWER_STATS[selectedTower].cost;
+          if (gameState.current.money >= cost) {
+            gameState.current.money -= cost;
+            gameState.current.towers.push({
+              id: Math.random().toString(),
+              type: selectedTower,
+              x,
+              y,
+              level: 1,
+              cooldown: 0,
+              range: TOWER_STATS[selectedTower].range,
+              damage: TOWER_STATS[selectedTower].damage,
+              targetId: null,
+              angle: 0
+            });
+            setSelectedTower(null);
+          }
         }
+        setRenderTrigger(prev => prev + 1);
       } else if (existingTower) {
         if (selectedTower) setSelectedTower(null);
+        if (selectedForPreview) setSelectedForPreview(null);
         setSelectedTowerId(existingTower.id);
         setRenderTrigger(prev => prev + 1);
         return;
       } else {
          setSelectedTowerId(null);
+         setSelectedForPreview(null);
          setRenderTrigger(prev => prev + 1);
       }
     }
-  };
+  }, [selectedTower, selectedForPreview, isMobile]);
 
   const handleUpgrade = (towerId: string) => {
     const tower = gameState.current.towers.find(t => t.id === towerId);
@@ -381,68 +447,107 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
   const activeTower = selectedTowerId ? gameState.current.towers.find(t => t.id === selectedTowerId) : null;
 
   return (
-    <div className="relative w-full max-w-5xl mx-auto p-4 select-none">
+    <div className={`relative w-full mx-auto select-none ${isMobile ? 'p-2' : 'p-4 max-w-5xl'}`}>
       
       {/* Header / HUD */}
-      <div className="flex justify-between items-center mb-4 bg-slate-900/90 p-4 rounded-xl shadow-lg border border-slate-700 backdrop-blur-sm">
-        <div className="flex items-center space-x-6">
-           <div className="flex items-center text-yellow-400 font-bold text-xl font-mono">
-             <Coins className="w-6 h-6 mr-2" />
-             BUDGET: {Math.floor(gameState.current.money)}
+      <div className={`flex justify-between items-center mb-4 bg-slate-900/90 rounded-xl shadow-lg border border-slate-700 backdrop-blur-sm ${
+        isMobile ? 'p-2 flex-col space-y-2' : 'p-4 flex-row'
+      }`}>
+        <div className={`flex items-center ${
+          isMobile ? 'w-full justify-between text-sm' : 'space-x-6'
+        }`}>
+           <div className={`flex items-center text-yellow-400 font-bold font-mono ${
+             isMobile ? 'text-sm' : 'text-xl'
+           }`}>
+             <Coins className={`mr-1 ${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} />
+             {isMobile ? Math.floor(gameState.current.money) : `BUDGET: ${Math.floor(gameState.current.money)}`}
            </div>
-           <div className="flex items-center text-blue-400 font-bold text-xl font-mono">
-             <Heart className="w-6 h-6 mr-2" />
-             SAFETY: {gameState.current.lives}
+           <div className={`flex items-center text-blue-400 font-bold font-mono ${
+             isMobile ? 'text-sm' : 'text-xl'
+           }`}>
+             <Heart className={`mr-1 ${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} />
+             {isMobile ? gameState.current.lives : `SAFETY: ${gameState.current.lives}`}
            </div>
-           <div className="flex items-center text-slate-300 font-bold text-xl font-mono">
-             <Siren className="w-6 h-6 mr-2 text-red-500 animate-pulse" />
-             WAVE {gameState.current.waveIndex + 1}/{gameState.current.level.waves.length}
+           <div className={`flex items-center text-slate-300 font-bold font-mono ${
+             isMobile ? 'text-sm' : 'text-xl'
+           }`}>
+             <Siren className={`mr-1 text-red-500 animate-pulse ${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} />
+             {gameState.current.waveIndex + 1}/{gameState.current.level.waves.length}
            </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-           <button onClick={togglePause} className="p-2 bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 transition">
-             {gameState.current.isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+        <div className={`flex items-center space-x-2 ${
+          isMobile ? 'w-full justify-center' : ''
+        }`}>
+           <button onClick={togglePause} className={`bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 transition ${
+             isMobile ? 'p-2' : 'p-2'
+           }`}>
+             {gameState.current.isPlaying ? <Pause className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'}`} /> : <Play className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'}`} />}
            </button>
-           <button onClick={onRestart} className="p-2 bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 transition">
-             <RotateCcw className="w-6 h-6" />
+           <button onClick={onRestart} className={`bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 transition ${
+             isMobile ? 'p-2' : 'p-2'
+           }`}>
+             <RotateCcw className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'}`} />
            </button>
-           <button onClick={onExit} className="px-4 py-2 bg-red-900/80 border border-red-800 rounded-lg hover:bg-red-800 font-bold text-sm">
-             ABORT
+           <button onClick={onExit} className={`bg-red-900/80 border border-red-800 rounded-lg hover:bg-red-800 font-bold transition ${
+             isMobile ? 'px-3 py-2 text-xs' : 'px-4 py-2 text-sm'
+           }`}>
+             {isMobile ? 'EXIT' : 'ABORT'}
            </button>
         </div>
       </div>
 
       {/* Main Game Area */}
-      <div className="relative bg-slate-950 rounded-2xl overflow-hidden border-4 border-slate-800 shadow-2xl"
-           style={{ width: GRID_WIDTH * CELL_SIZE, height: GRID_HEIGHT * CELL_SIZE, margin: '0 auto' }}>
+      <div className={`relative bg-slate-950 overflow-hidden shadow-2xl mx-auto ${
+        isMobile ? 'rounded-lg border-2 border-slate-800' : 'rounded-2xl border-4 border-slate-800'
+      }`}
+           style={{ 
+             width: GRID_WIDTH * cellSize, 
+             height: GRID_HEIGHT * cellSize,
+             touchAction: 'manipulation' // 优化触控响应
+           }}>
         
         {/* Background Texture */}
         <div className="absolute inset-0 opacity-20" 
-             style={{ backgroundImage: 'linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)', backgroundSize: '60px 60px' }}></div>
+             style={{ 
+               backgroundImage: 'linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)', 
+               backgroundSize: `${cellSize}px ${cellSize}px` 
+             }}></div>
 
          {/* Road Visuals - Draw lines connecting path nodes */}
          <svg className="absolute inset-0 pointer-events-none z-0" width="100%" height="100%">
             {/* Road Base */}
             <polyline 
-              points={gameState.current.level.path.map(p => `${p.x * CELL_SIZE + CELL_SIZE/2},${p.y * CELL_SIZE + CELL_SIZE/2}`).join(' ')}
+              points={gameState.current.level.path.map(p => `${p.x * cellSize + cellSize/2},${p.y * cellSize + cellSize/2}`).join(' ')}
               fill="none"
               stroke="#1e293b" // slate-800
-              strokeWidth={CELL_SIZE * 0.8}
+              strokeWidth={cellSize * 0.8}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
             {/* Lane Markings */}
             <polyline 
-              points={gameState.current.level.path.map(p => `${p.x * CELL_SIZE + CELL_SIZE/2},${p.y * CELL_SIZE + CELL_SIZE/2}`).join(' ')}
+              points={gameState.current.level.path.map(p => `${p.x * cellSize + cellSize/2},${p.y * cellSize + cellSize/2}`).join(' ')}
               fill="none"
               stroke="#fbbf24" // yellow-400
-              strokeWidth={2}
-              strokeDasharray="10, 10"
+              strokeWidth={Math.max(2, cellSize * 0.05)}
+              strokeDasharray={`${cellSize * 0.15}, ${cellSize * 0.15}`}
               strokeLinecap="round"
               strokeLinejoin="round"
               className="opacity-50"
             />
+            
+            {/* Debug: Path Points - 仅在移动端显示帮助调试 */}
+            {isMobile && gameState.current.level.path.map((point, index) => (
+              <circle 
+                key={index}
+                cx={point.x * cellSize + cellSize/2}
+                cy={point.y * cellSize + cellSize/2}
+                r={3}
+                fill="#22c55e"
+                opacity={0.7}
+              />
+            ))}
          </svg>
 
          {/* Range Indicator */}
@@ -450,32 +555,58 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
             <div 
               className="absolute rounded-full border-2 border-blue-400/30 bg-blue-500/10 pointer-events-none z-0 transition-all duration-200"
               style={{
-                width: activeTower.range * 2 * CELL_SIZE,
-                height: activeTower.range * 2 * CELL_SIZE,
-                left: (activeTower.x + 0.5) * CELL_SIZE - (activeTower.range * CELL_SIZE),
-                top: (activeTower.y + 0.5) * CELL_SIZE - (activeTower.range * CELL_SIZE),
+                width: activeTower.range * 2 * cellSize,
+                height: activeTower.range * 2 * cellSize,
+                left: (activeTower.x + 0.5) * cellSize - (activeTower.range * cellSize),
+                top: (activeTower.y + 0.5) * cellSize - (activeTower.range * cellSize),
               }}
             />
          )}
 
          {/* Start Marker */}
          <div className="absolute flex flex-col items-center justify-center z-10"
-              style={{ width: CELL_SIZE, height: CELL_SIZE, left: gameState.current.level.path[0].x * CELL_SIZE, top: gameState.current.level.path[0].y * CELL_SIZE }}>
-            <div className="bg-green-600 text-[10px] px-1 rounded font-bold mb-1">ENTRY</div>
-            <ArrowUpCircle className="w-8 h-8 text-green-500" />
+              style={{ 
+                width: cellSize, 
+                height: cellSize, 
+                left: gameState.current.level.path[0].x * cellSize, 
+                top: gameState.current.level.path[0].y * cellSize 
+              }}>
+            <div className={`bg-green-600 text-white px-1 rounded font-bold mb-1 ${
+              isMobile ? 'text-[8px]' : 'text-[10px]'
+            }`}>ENTRY</div>
+            <ArrowUpCircle className={`text-green-500 ${
+              isMobile ? 'w-6 h-6' : 'w-8 h-8'
+            }`} />
          </div>
 
          {/* End Marker: Zang Overpass */}
          <div className="absolute flex items-center justify-center z-0"
-              style={{ width: CELL_SIZE, height: CELL_SIZE, left: gameState.current.level.path[gameState.current.level.path.length-1].x * CELL_SIZE, top: gameState.current.level.path[gameState.current.level.path.length-1].y * CELL_SIZE }}>
-            <div className="relative w-14 h-14 flex flex-col items-center justify-center">
-               <div className="absolute bottom-0 w-full h-2 bg-slate-600 rounded-full" />
-               <div className="bg-blue-600 border-2 border-white text-white text-[8px] font-bold px-1 rounded shadow-lg z-10 -mt-4 whitespace-nowrap">
-                 ZANG OVERPASS
+              style={{ 
+                width: cellSize, 
+                height: cellSize, 
+                left: gameState.current.level.path[gameState.current.level.path.length-1].x * cellSize, 
+                top: gameState.current.level.path[gameState.current.level.path.length-1].y * cellSize 
+              }}>
+            <div className={`relative flex flex-col items-center justify-center ${
+              isMobile ? 'w-10 h-10' : 'w-14 h-14'
+            }`}>
+               <div className={`absolute bottom-0 w-full bg-slate-600 rounded-full ${
+                 isMobile ? 'h-1' : 'h-2'
+               }`} />
+               <div className={`bg-blue-600 border-2 border-white text-white font-bold px-1 rounded shadow-lg z-10 -mt-4 whitespace-nowrap ${
+                 isMobile ? 'text-[6px]' : 'text-[8px]'
+               }`}>
+                 {isMobile ? 'ZANG' : 'ZANG OVERPASS'}
                </div>
-               <div className="w-12 h-8 bg-slate-700 rounded-t-lg border-x-4 border-slate-500 mt-1 relative overflow-hidden flex justify-center">
-                  <div className="w-2 h-full bg-yellow-500/20" />
-                  <div className="w-2 h-full bg-yellow-500/20 mx-1" />
+               <div className={`bg-slate-700 rounded-t-lg border-x-4 border-slate-500 mt-1 relative overflow-hidden flex justify-center ${
+                 isMobile ? 'w-8 h-6 border-x-2' : 'w-12 h-8'
+               }`}>
+                  <div className={`bg-yellow-500/20 ${
+                    isMobile ? 'w-1' : 'w-2'
+                  } h-full`} />
+                  <div className={`bg-yellow-500/20 h-full mx-1 ${
+                    isMobile ? 'w-1' : 'w-2'
+                  }`} />
                </div>
             </div>
          </div>
@@ -486,21 +617,37 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
             <div
               key={`${x}-${y}`}
               onClick={() => handleGridClick(x, y)}
-              onMouseEnter={() => setHoverCell({x, y})}
-              onMouseLeave={() => setHoverCell(null)}
-              className={`absolute border border-white/5 transition-colors duration-150 z-10 ${getCellClass(x, y)}`}
+              onMouseEnter={() => !isMobile && setHoverCell({x, y})}
+              onMouseLeave={() => !isMobile && setHoverCell(null)}
+              className={`absolute border border-white/5 transition-all duration-150 z-10 ${
+                isMobile ? 'active:bg-white/20' : ''
+              } ${getCellClass(x, y)}`}
               style={{
-                width: CELL_SIZE,
-                height: CELL_SIZE,
-                left: x * CELL_SIZE,
-                top: y * CELL_SIZE,
+                width: cellSize,
+                height: cellSize,
+                left: x * cellSize,
+                top: y * cellSize,
+                minHeight: isMobile ? '44px' : 'auto' // 确保触控目标足够大
               }}
             >
-              {selectedTower && hoverCell?.x === x && hoverCell?.y === y && 
+              {/* 桌面端悬停预览 */}
+              {!isMobile && selectedTower && hoverCell?.x === x && hoverCell?.y === y && 
                !gameState.current.level.path.some(p => p.x === x && p.y === y) && 
                !gameState.current.towers.some(t => t.x === x && t.y === y) && (
                 <div className={`w-full h-full opacity-50 rounded-full scale-75 ${TOWER_STATS[selectedTower].color} pointer-events-none flex items-center justify-center`}>
-                    <User className="w-6 h-6 text-white" />
+                    <User className={`text-white ${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} />
+                </div>
+              )}
+              
+              {/* 移动端预览 */}
+              {isMobile && selectedTower && selectedForPreview?.x === x && selectedForPreview?.y === y && 
+               !gameState.current.level.path.some(p => p.x === x && p.y === y) && 
+               !gameState.current.towers.some(t => t.x === x && t.y === y) && (
+                <div className={`w-full h-full opacity-75 rounded-full scale-90 ${TOWER_STATS[selectedTower].color} pointer-events-none flex items-center justify-center border-2 border-white animate-pulse`}>
+                    <User className="text-white w-5 h-5" />
+                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                      再次点击确认
+                    </div>
                 </div>
               )}
             </div>
@@ -510,60 +657,92 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
         {/* Towers (Police Units) */}
         {gameState.current.towers.map(tower => {
            const isSelected = selectedTowerId === tower.id;
+           const towerSize = Math.max(cellSize * 0.8, 32); // 确保最小可见尺寸
            return (
             <div
               key={tower.id}
               className={`absolute flex items-center justify-center z-20 pointer-events-none transition-transform duration-200 ${isSelected ? 'scale-110 z-50' : ''}`}
               style={{
-                width: CELL_SIZE,
-                height: CELL_SIZE,
-                left: tower.x * CELL_SIZE,
-                top: tower.y * CELL_SIZE,
+                width: cellSize,
+                height: cellSize,
+                left: tower.x * cellSize,
+                top: tower.y * cellSize,
               }}
             >
-              <div className={`relative w-12 h-12 rounded-full shadow-lg border-2 border-slate-900 ${TOWER_STATS[tower.type].color} flex items-center justify-center`}>
+              <div 
+                className={`relative rounded-full shadow-lg border-2 border-slate-900 ${TOWER_STATS[tower.type].color} flex items-center justify-center`}
+                style={{ width: towerSize, height: towerSize }}
+              >
                 {/* Level Stars */}
-                <div className="absolute -top-2 flex space-x-0.5">
-                   {tower.level >= 1 && <div className="w-2 h-2 bg-yellow-300 rounded-full border border-black" />}
-                   {tower.level >= 2 && <div className="w-2 h-2 bg-yellow-300 rounded-full border border-black" />}
-                   {tower.level >= 3 && <div className="w-2 h-2 bg-yellow-300 rounded-full border border-black" />}
+                <div className={`absolute flex space-x-0.5 ${
+                  isMobile ? '-top-1' : '-top-2'
+                }`}>
+                   {tower.level >= 1 && <div className={`bg-yellow-300 rounded-full border border-black ${
+                     isMobile ? 'w-1.5 h-1.5' : 'w-2 h-2'
+                   }`} />}
+                   {tower.level >= 2 && <div className={`bg-yellow-300 rounded-full border border-black ${
+                     isMobile ? 'w-1.5 h-1.5' : 'w-2 h-2'
+                   }`} />}
+                   {tower.level >= 3 && <div className={`bg-yellow-300 rounded-full border border-black ${
+                     isMobile ? 'w-1.5 h-1.5' : 'w-2 h-2'
+                   }`} />}
                 </div>
 
                 {/* Unit Icon - Rotates */}
                 <div className="w-full h-full absolute inset-0 flex items-center justify-center transition-transform duration-100"
                       style={{ transform: `rotate(${tower.angle}deg)` }}>
-                    {tower.type === TowerType.AUXILIARY && <User className="w-6 h-6 text-white" />}
-                    {tower.type === TowerType.TRAFFIC && <Octagon className="w-6 h-6 text-white fill-white/20" />}
-                    {tower.type === TowerType.PATROL && <Siren className="w-7 h-7 text-white animate-pulse" />}
-                    {tower.type === TowerType.SWAT && <Shield className="w-6 h-6 text-white fill-slate-300" />}
+                    {tower.type === TowerType.AUXILIARY && <User className={`text-white ${
+                      isMobile ? 'w-4 h-4' : 'w-6 h-6'
+                    }`} />}
+                    {tower.type === TowerType.TRAFFIC && <Octagon className={`text-white fill-white/20 ${
+                      isMobile ? 'w-4 h-4' : 'w-6 h-6'
+                    }`} />}
+                    {tower.type === TowerType.PATROL && <Siren className={`text-white animate-pulse ${
+                      isMobile ? 'w-5 h-5' : 'w-7 h-7'
+                    }`} />}
+                    {tower.type === TowerType.SWAT && <Shield className={`text-white fill-slate-300 ${
+                      isMobile ? 'w-4 h-4' : 'w-6 h-6'
+                    }`} />}
                 </div>
               </div>
 
               {/* Upgrade Menu */}
               {isSelected && (
-                 <div className="absolute bottom-full mb-2 pointer-events-auto flex flex-col items-center z-50 animate-pop gap-2 bg-slate-900/90 p-2 rounded-lg border border-slate-600">
+                 <div className={`absolute pointer-events-auto flex items-center z-50 animate-pop gap-2 bg-slate-900/95 p-3 rounded-lg border border-slate-600 shadow-xl backdrop-blur-sm ${
+                   isMobile 
+                     ? 'bottom-full mb-4 flex-col min-w-[120px]' 
+                     : 'bottom-full mb-2 flex-col'
+                 }`}>
                     <button 
                       onClick={(e) => { e.stopPropagation(); handleSell(tower.id); }}
-                      className="w-full flex items-center justify-center space-x-1 bg-red-600 hover:bg-red-500 text-white text-xs font-bold py-1 px-2 rounded shadow-lg"
+                      className={`flex items-center justify-center space-x-1 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-bold rounded shadow-lg transition-all ${
+                        isMobile ? 'w-full py-2 px-3 text-sm' : 'w-full py-1 px-2 text-xs'
+                      }`}
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className={`${isMobile ? 'w-4 h-4' : 'w-3 h-3'}`} />
                       <span>{Math.floor(TOWER_STATS[tower.type].cost * tower.level * 0.5)}</span>
                     </button>
 
                     {tower.level < MAX_TOWER_LEVEL ? (
                       <button 
                          onClick={(e) => { e.stopPropagation(); handleUpgrade(tower.id); }}
-                         className={`w-full flex items-center justify-between space-x-2 text-xs font-bold py-1 px-2 rounded shadow-lg border transition-all ${
+                         className={`flex items-center justify-between space-x-2 font-bold rounded shadow-lg border transition-all ${
+                           isMobile ? 'w-full py-2 px-3 text-sm' : 'w-full py-1 px-2 text-xs'
+                         } ${
                            gameState.current.money >= Math.floor(TOWER_STATS[tower.type].cost * 0.75 * tower.level)
-                             ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-400'
+                             ? 'bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white border-blue-400'
                              : 'bg-slate-700 text-slate-400 border-slate-600 cursor-not-allowed'
                          }`}
                       >
-                         <ArrowUpCircle className="w-3 h-3" />
+                         <ArrowUpCircle className={`${isMobile ? 'w-4 h-4' : 'w-3 h-3'}`} />
                          <span>{Math.floor(TOWER_STATS[tower.type].cost * 0.75 * tower.level)}</span>
                       </button>
                     ) : (
-                      <div className="text-yellow-400 text-[10px] font-bold">MAX RANK</div>
+                      <div className={`text-yellow-400 font-bold ${
+                        isMobile ? 'text-sm' : 'text-[10px]'
+                      }`}>
+                        MAX RANK
+                      </div>
                     )}
                  </div>
               )}
@@ -572,47 +751,85 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
         })}
 
         {/* Enemies (Motorcycles) */}
-        {gameState.current.enemies.map(enemy => (
+        {gameState.current.enemies.map(enemy => {
+          const enemySize = cellSize * 0.8;
+          // 将网格坐标转换为像素坐标，居中显示在网格中
+          const pixelX = enemy.x * cellSize + (cellSize - enemySize) / 2;
+          const pixelY = enemy.y * cellSize + (cellSize - enemySize) / 2;
+          
+          return (
           <div
             key={enemy.id}
             className={`absolute flex items-center justify-center transition-transform z-30 pointer-events-none ${enemy.frozen > 0 ? 'brightness-150 saturate-50' : ''}`}
             style={{
-              width: CELL_SIZE * 0.8,
-              height: CELL_SIZE * 0.8,
-              transform: `translate(${enemy.x * CELL_SIZE + CELL_SIZE * 0.1}px, ${enemy.y * CELL_SIZE + CELL_SIZE * 0.1}px)`,
+              width: enemySize,
+              height: enemySize,
+              left: pixelX,
+              top: pixelY,
             }}
           >
             <div className={`w-full h-full rounded-full shadow-md border-2 border-white/20 ${ENEMY_STATS[enemy.type].color} relative flex items-center justify-center`}>
                {/* Health Bar */}
-               <div className="absolute -top-3 left-0 w-full h-1 bg-slate-700 rounded overflow-hidden">
+               <div className={`absolute left-0 w-full bg-slate-700 rounded overflow-hidden ${
+                 isMobile ? '-top-2 h-1' : '-top-3 h-1'
+               }`}>
                  <div className="h-full bg-green-500" style={{ width: `${(enemy.hp / enemy.maxHp) * 100}%` }}></div>
                </div>
                
-               {/* Icon */}
-               <Bike className="w-5 h-5 text-white/90" />
-               {enemy.type === EnemyType.SCOOTER && <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full animate-ping" />} 
+               {/* Debug Info - 仅在移动端显示帮助调试 */}
+               {isMobile && (
+                 <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-black/70 text-white text-[8px] px-1 rounded whitespace-nowrap">
+                   {enemy.pathIndex}/{gameState.current.level.path.length - 1}
+                 </div>
+               )}
                
-               {enemy.frozen > 0 && <Octagon className="absolute -right-2 -bottom-2 w-4 h-4 text-red-500 fill-red-500 animate-bounce" />}
+               {/* Icon */}
+               <Bike className={`text-white/90 ${
+                 isMobile ? 'w-3 h-3' : 'w-5 h-5'
+               }`} />
+               {enemy.type === EnemyType.SCOOTER && <div className={`absolute top-0 right-0 bg-red-500 rounded-full animate-ping ${
+                 isMobile ? 'w-1.5 h-1.5' : 'w-2 h-2'
+               }`} />} 
+               
+               {enemy.frozen > 0 && <Octagon className={`absolute -right-2 -bottom-2 text-red-500 fill-red-500 animate-bounce ${
+                 isMobile ? 'w-3 h-3' : 'w-4 h-4'
+               }`} />}
             </div>
           </div>
-        ))}
+        )})}
 
         {/* Projectiles */}
-        {gameState.current.projectiles.map(p => (
+        {gameState.current.projectiles.map(p => {
+          const projectileSize = Math.max(cellSize * 0.15, 4);
+          // 将网格坐标转换为像素坐标，居中显示
+          const pixelX = p.x * cellSize + cellSize/2 - projectileSize;
+          const pixelY = p.y * cellSize + cellSize/2 - projectileSize;
+          
+          return (
            <div
              key={p.id}
-             className="absolute w-4 h-4 z-40 flex items-center justify-center pointer-events-none"
+             className="absolute z-40 flex items-center justify-center pointer-events-none"
              style={{
-               left: p.x * CELL_SIZE + CELL_SIZE/2 - 8,
-               top: p.y * CELL_SIZE + CELL_SIZE/2 - 8,
+               width: projectileSize * 2,
+               height: projectileSize * 2,
+               left: pixelX,
+               top: pixelY,
              }}
            >
-              {p.type === TowerType.AUXILIARY && <div className="w-2 h-4 bg-white rotate-45" />} 
-              {p.type === TowerType.TRAFFIC && <div className="w-4 h-4 bg-red-600 rounded-full border border-white" />}
-              {p.type === TowerType.PATROL && <div className="w-8 h-8 rounded-full border-2 border-blue-400 opacity-50 animate-ping" />}
-              {p.type === TowerType.SWAT && <Zap className="w-4 h-4 text-yellow-300 fill-current" />}
+              {p.type === TowerType.AUXILIARY && <div className={`bg-white rotate-45 ${
+                isMobile ? 'w-1 h-2' : 'w-2 h-4'
+              }`} />} 
+              {p.type === TowerType.TRAFFIC && <div className={`bg-red-600 rounded-full border border-white ${
+                isMobile ? 'w-2 h-2' : 'w-4 h-4'
+              }`} />}
+              {p.type === TowerType.PATROL && <div className={`rounded-full border-2 border-blue-400 opacity-50 animate-ping ${
+                isMobile ? 'w-4 h-4' : 'w-8 h-8'
+              }`} />}
+              {p.type === TowerType.SWAT && <Zap className={`text-yellow-300 fill-current ${
+                isMobile ? 'w-2 h-2' : 'w-4 h-4'
+              }`} />}
            </div>
-        ))}
+        )})}
 
         {/* Overlay: Game Over / Victory */}
         {(gameState.current.isGameOver || gameState.current.isVictory) && (
@@ -634,62 +851,106 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
         )}
       </div>
 
-      {/* Unit Selection Footer */}
-      <div className="mt-6 flex justify-center space-x-4">
-        {Object.keys(TOWER_STATS).map((key) => {
-          const type = key as TowerType;
-          const stats = TOWER_STATS[type];
-          const canAfford = gameState.current.money >= stats.cost;
-          const isSelected = selectedTower === type;
-
-          return (
-            <button
-              key={type}
-              onClick={() => handleTowerSelectionFromMenu(type)}
-              disabled={!canAfford}
-              className={`
-                relative group flex flex-col items-center p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer min-w-[100px]
-                ${isSelected ? 'border-blue-400 bg-slate-800 -translate-y-2 shadow-blue-500/20 shadow-lg' : 'border-slate-700 bg-slate-900 hover:bg-slate-800'}
-                ${!canAfford ? 'opacity-40 cursor-not-allowed grayscale' : 'hover:border-slate-500'}
-              `}
+      {/* Unit Selection Panel */}
+      <div className={`flex justify-center ${
+        isMobile 
+          ? 'fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-sm border-t border-slate-700 p-3 z-50' 
+          : 'mt-6 space-x-4'
+      }`}>
+        {isMobile && (
+          <div className="absolute top-2 right-4">
+            <button 
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="p-2 bg-slate-800 rounded-full border border-slate-600"
             >
-               <div className={`w-10 h-10 rounded-full mb-2 shadow-inner ${stats.color} flex items-center justify-center`}>
-                  {type === TowerType.AUXILIARY && <User className="w-5 h-5 text-white" />}
-                  {type === TowerType.TRAFFIC && <Octagon className="w-5 h-5 text-white" />}
-                  {type === TowerType.PATROL && <Siren className="w-5 h-5 text-white" />}
-                  {type === TowerType.SWAT && <Shield className="w-5 h-5 text-white" />}
-               </div>
-               <span className="font-bold text-xs text-slate-200 uppercase tracking-wider">{stats.name}</span>
-               <div className="flex items-center text-yellow-400 text-xs font-bold mt-1 bg-black/30 px-2 py-0.5 rounded-full">
-                 <Coins className="w-3 h-3 mr-1" />
-                 {stats.cost}
-               </div>
-
-               {/* Tooltip */}
-               <div className="absolute bottom-full mb-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none w-56 bg-slate-800 p-4 rounded-lg text-xs z-50 border border-slate-600 shadow-xl">
-                  <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-600">
-                    <p className="font-bold text-sm text-blue-300">{stats.name}</p>
-                    {type === TowerType.SWAT && <Star className="w-3 h-3 text-yellow-400" />}
-                  </div>
-                  <p className="text-slate-400 mb-3 italic">{stats.description}</p>
-                  <div className="grid grid-cols-3 gap-2 text-slate-300 text-center">
-                    <div className="bg-slate-700 rounded p-1">
-                       <div className="text-[10px] text-slate-500">DMG</div>
-                       <div className="font-bold">{stats.damage}</div>
-                    </div>
-                    <div className="bg-slate-700 rounded p-1">
-                       <div className="text-[10px] text-slate-500">RNG</div>
-                       <div className="font-bold">{stats.range}</div>
-                    </div>
-                    <div className="bg-slate-700 rounded p-1">
-                       <div className="text-[10px] text-slate-500">SPD</div>
-                       <div className="font-bold">{stats.speed}</div>
-                    </div>
-                  </div>
-               </div>
+              {showMobileMenu ? <X className="w-5 h-5 text-white" /> : <Menu className="w-5 h-5 text-white" />}
             </button>
-          );
-        })}
+          </div>
+        )}
+        
+        <div className={`flex ${
+          isMobile 
+            ? `gap-2 overflow-x-auto scrollbar-hide pb-safe ${showMobileMenu ? 'w-full' : 'w-full'}` 
+            : 'space-x-4 justify-center'
+        }`}>
+          {Object.keys(TOWER_STATS).map((key) => {
+            const type = key as TowerType;
+            const stats = TOWER_STATS[type];
+            const canAfford = gameState.current.money >= stats.cost;
+            const isSelected = selectedTower === type;
+
+            return (
+              <button
+                key={type}
+                onClick={() => handleTowerSelectionFromMenu(type)}
+                disabled={!canAfford}
+                className={`
+                  relative group flex flex-col items-center rounded-xl border-2 transition-all duration-200 cursor-pointer
+                  ${isMobile ? 'p-2 min-w-[80px] flex-shrink-0' : 'p-3 min-w-[100px]'}
+                  ${isSelected ? 'border-blue-400 bg-slate-800 shadow-blue-500/20 shadow-lg' : 'border-slate-700 bg-slate-900 hover:bg-slate-800'}
+                  ${isSelected && !isMobile ? '-translate-y-2' : ''}
+                  ${!canAfford ? 'opacity-40 cursor-not-allowed grayscale' : 'hover:border-slate-500'}
+                  ${isMobile ? 'active:scale-95' : ''}
+                `}
+              >
+                 <div className={`rounded-full mb-2 shadow-inner ${stats.color} flex items-center justify-center ${
+                   isMobile ? 'w-8 h-8' : 'w-10 h-10'
+                 }`}>
+                    {type === TowerType.AUXILIARY && <User className={`text-white ${
+                      isMobile ? 'w-4 h-4' : 'w-5 h-5'
+                    }`} />}
+                    {type === TowerType.TRAFFIC && <Octagon className={`text-white ${
+                      isMobile ? 'w-4 h-4' : 'w-5 h-5'
+                    }`} />}
+                    {type === TowerType.PATROL && <Siren className={`text-white ${
+                      isMobile ? 'w-4 h-4' : 'w-5 h-5'
+                    }`} />}
+                    {type === TowerType.SWAT && <Shield className={`text-white ${
+                      isMobile ? 'w-4 h-4' : 'w-5 h-5'
+                    }`} />}
+                 </div>
+                 <span className={`font-bold text-slate-200 uppercase tracking-wider ${
+                   isMobile ? 'text-[10px]' : 'text-xs'
+                 }`}>
+                   {isMobile ? stats.name.split(' ')[0] : stats.name}
+                 </span>
+                 <div className={`flex items-center text-yellow-400 font-bold bg-black/30 rounded-full ${
+                   isMobile ? 'text-[10px] mt-0.5 px-1 py-0.5' : 'text-xs mt-1 px-2 py-0.5'
+                 }`}>
+                   <Coins className={`mr-1 ${
+                     isMobile ? 'w-2 h-2' : 'w-3 h-3'
+                   }`} />
+                   {stats.cost}
+                 </div>
+
+                 {/* Tooltip - 只在桌面端显示 */}
+                 {!isMobile && (
+                   <div className="absolute bottom-full mb-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none w-56 bg-slate-800 p-4 rounded-lg text-xs z-50 border border-slate-600 shadow-xl">
+                      <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-600">
+                        <p className="font-bold text-sm text-blue-300">{stats.name}</p>
+                        {type === TowerType.SWAT && <Star className="w-3 h-3 text-yellow-400" />}
+                      </div>
+                      <p className="text-slate-400 mb-3 italic">{stats.description}</p>
+                      <div className="grid grid-cols-3 gap-2 text-slate-300 text-center">
+                        <div className="bg-slate-700 rounded p-1">
+                           <div className="text-[10px] text-slate-500">DMG</div>
+                           <div className="font-bold">{stats.damage}</div>
+                        </div>
+                        <div className="bg-slate-700 rounded p-1">
+                           <div className="text-[10px] text-slate-500">RNG</div>
+                           <div className="font-bold">{stats.range}</div>
+                        </div>
+                        <div className="bg-slate-700 rounded p-1">
+                           <div className="text-[10px] text-slate-500">SPD</div>
+                           <div className="font-bold">{stats.speed}</div>
+                        </div>
+                      </div>
+                   </div>
+                 )}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

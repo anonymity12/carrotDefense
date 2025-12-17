@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#0f172a" />
     <title>川藏立交保护者</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -27,6 +30,37 @@
       .no-scrollbar {
         -ms-overflow-style: none;
         scrollbar-width: none;
+      }
+      
+      /* Mobile optimizations */
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      
+      /* Better touch targets */
+      @media (max-width: 768px) {
+        * {
+          -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        }
+        
+        button, .cursor-pointer {
+          min-height: 44px;
+          min-width: 44px;
+        }
+        
+        /* Safe area padding for newer phones */
+        .pb-safe {
+          padding-bottom: env(safe-area-inset-bottom);
+        }
+      }
+      
+      /* Disable zoom on double tap */
+      * {
+        touch-action: manipulation;
       }
     </style>
   <script type="module" src="/index.tsx"></script>

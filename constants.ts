@@ -1,7 +1,23 @@
 
 import { EnemyType, TowerType, WaveConfig } from './types';
 
-export const CELL_SIZE = 60; // Pixels
+// 动态计算格子大小
+export const calculateCellSize = () => {
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight;
+  
+  // 考虑padding和UI元素占用的空间
+  const availableWidth = screenWidth - 32; // 32px padding
+  const availableHeight = screenHeight - 300; // 300px给HUD和控制面板
+  
+  const cellSizeByWidth = Math.floor(availableWidth / GRID_WIDTH);
+  const cellSizeByHeight = Math.floor(availableHeight / GRID_HEIGHT);
+  
+  // 取较小值确保完全显示，但不小于35px，不大于60px
+  return Math.max(Math.min(Math.min(cellSizeByWidth, cellSizeByHeight), 60), 35);
+};
+
+export const CELL_SIZE = 60; // 默认桌面端尺寸
 export const GRID_WIDTH = 12;
 export const GRID_HEIGHT = 8;
 export const FPS = 60;
@@ -47,10 +63,10 @@ export const TOWER_STATS: Record<TowerType, { name: string; cost: number; range:
 };
 
 export const ENEMY_STATS: Record<EnemyType, { hp: number; speed: number; reward: number; color: string; label: string }> = {
-  [EnemyType.SCOOTER]: { hp: 50, speed: 0.04, reward: 15, color: 'bg-orange-400', label: 'No Helmet' },
-  [EnemyType.DELIVERY]: { hp: 150, speed: 0.02, reward: 25, color: 'bg-red-500', label: 'No License' },
-  [EnemyType.RACER]: { hp: 30, speed: 0.07, reward: 20, color: 'bg-purple-400', label: 'Speeding' },
-  [EnemyType.MODIFIED]: { hp: 1000, speed: 0.015, reward: 500, color: 'bg-black', label: 'Modded' },
+  [EnemyType.SCOOTER]: { hp: 50, speed: 0.02, reward: 15, color: 'bg-orange-400', label: 'No Helmet' },
+  [EnemyType.DELIVERY]: { hp: 150, speed: 0.01, reward: 25, color: 'bg-red-500', label: 'No License' },
+  [EnemyType.RACER]: { hp: 30, speed: 0.035, reward: 20, color: 'bg-purple-400', label: 'Speeding' },
+  [EnemyType.MODIFIED]: { hp: 1000, speed: 0.008, reward: 500, color: 'bg-black', label: 'Modded' },
 };
 
 export const DEFAULT_LEVEL_PATH = [
