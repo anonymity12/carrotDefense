@@ -25,9 +25,66 @@ import {
 } from 'lucide-react';
 import { CELL_SIZE, calculateCellSize, GRID_HEIGHT, GRID_WIDTH, TOWER_STATS, ENEMY_STATS, MAX_TOWER_LEVEL } from '../constants';
 import { Enemy, EnemyType, GameLevel, GameState, TowerType } from '../types';
+import { pandaTowerIconSpecs, pandaEnemyIconSpecs } from '../assets/iconManifest';
 
 // Utility for distance
 const dist = (x1: number, y1: number, x2: number, y2: number) => Math.hypot(x2 - x1, y2 - y1);
+
+const towerIconSources: Record<TowerType, string> = {
+  [TowerType.AUXILIARY]: pandaTowerIconSpecs[TowerType.AUXILIARY].publicPath,
+  [TowerType.TRAFFIC]: pandaTowerIconSpecs[TowerType.TRAFFIC].publicPath,
+  [TowerType.PATROL]: pandaTowerIconSpecs[TowerType.PATROL].publicPath,
+  [TowerType.SWAT]: pandaTowerIconSpecs[TowerType.SWAT].publicPath,
+};
+
+const enemyIconSources: Record<EnemyType, string> = {
+  [EnemyType.SCOOTER]: pandaEnemyIconSpecs[EnemyType.SCOOTER].publicPath,
+  [EnemyType.DELIVERY]: pandaEnemyIconSpecs[EnemyType.DELIVERY].publicPath,
+  [EnemyType.RACER]: pandaEnemyIconSpecs[EnemyType.RACER].publicPath,
+  [EnemyType.MODIFIED]: pandaEnemyIconSpecs[EnemyType.MODIFIED].publicPath,
+};
+
+const getTowerFallbackIcon = (type: TowerType, className: string) => {
+  switch (type) {
+    case TowerType.AUXILIARY:
+      return <User className={className} />;
+    case TowerType.TRAFFIC:
+      return <Octagon className={className} />;
+    case TowerType.PATROL:
+      return <Siren className={`${className} animate-pulse`} />;
+    case TowerType.SWAT:
+    default:
+      return <Shield className={className} />;
+  }
+};
+
+const getEnemyFallbackIcon = (type: EnemyType, className: string) => <Bike className={className} />;
+
+interface IconImageProps {
+  src: string;
+  alt: string;
+  className?: string;
+  fallback?: React.ReactNode;
+}
+
+const IconImage: React.FC<IconImageProps> = ({ src, alt, className, fallback }) => {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return fallback ? <>{fallback}</> : null;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      draggable={false}
+    />
+  );
+};
 
 interface GameProps {
   level: GameLevel;
@@ -691,18 +748,12 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
                 {/* Unit Icon - Rotates */}
                 <div className="w-full h-full absolute inset-0 flex items-center justify-center transition-transform duration-100"
                       style={{ transform: `rotate(${tower.angle}deg)` }}>
-                    {tower.type === TowerType.AUXILIARY && <User className={`text-white ${
-                      isMobile ? 'w-4 h-4' : 'w-6 h-6'
-                    }`} />}
-                    {tower.type === TowerType.TRAFFIC && <Octagon className={`text-white fill-white/20 ${
-                      isMobile ? 'w-4 h-4' : 'w-6 h-6'
-                    }`} />}
-                    {tower.type === TowerType.PATROL && <Siren className={`text-white animate-pulse ${
-                      isMobile ? 'w-5 h-5' : 'w-7 h-7'
-                    }`} />}
-                    {tower.type === TowerType.SWAT && <Shield className={`text-white fill-slate-300 ${
-                      isMobile ? 'w-4 h-4' : 'w-6 h-6'
-                    }`} />}
+                  <IconImage
+                    src={towerIconSources[tower.type]}
+                    alt={`${tower.type} panda tower`}
+                    className={`w-3/4 h-3/4 object-contain drop-shadow-lg ${tower.type === TowerType.PATROL ? 'animate-pulse' : ''}`}
+                    fallback={getTowerFallbackIcon(tower.type, `${isMobile ? 'w-4 h-4' : 'w-6 h-6'} text-white`)}
+                  />
                 </div>
               </div>
 
@@ -784,9 +835,12 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
                )}
                
                {/* Icon */}
-               <Bike className={`text-white/90 ${
-                 isMobile ? 'w-3 h-3' : 'w-5 h-5'
-               }`} />
+               <IconImage
+                 src={enemyIconSources[enemy.type]}
+                 alt={`${enemy.type} panda enemy`}
+                 className={`object-contain ${isMobile ? 'w-3/4 h-3/4' : 'w-4/5 h-4/5'}`}
+                 fallback={getEnemyFallbackIcon(enemy.type, `${isMobile ? 'w-3 h-3' : 'w-5 h-5'} text-white/90`)}
+               />
                {enemy.type === EnemyType.SCOOTER && <div className={`absolute top-0 right-0 bg-red-500 rounded-full animate-ping ${
                  isMobile ? 'w-1.5 h-1.5' : 'w-2 h-2'
                }`} />} 
@@ -893,21 +947,15 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
                   ${isMobile ? 'active:scale-95' : ''}
                 `}
               >
-                 <div className={`rounded-full mb-2 shadow-inner ${stats.color} flex items-center justify-center ${
+                <div className={`rounded-full mb-2 shadow-inner ${stats.color} flex items-center justify-center overflow-hidden ${
                    isMobile ? 'w-8 h-8' : 'w-10 h-10'
                  }`}>
-                    {type === TowerType.AUXILIARY && <User className={`text-white ${
-                      isMobile ? 'w-4 h-4' : 'w-5 h-5'
-                    }`} />}
-                    {type === TowerType.TRAFFIC && <Octagon className={`text-white ${
-                      isMobile ? 'w-4 h-4' : 'w-5 h-5'
-                    }`} />}
-                    {type === TowerType.PATROL && <Siren className={`text-white ${
-                      isMobile ? 'w-4 h-4' : 'w-5 h-5'
-                    }`} />}
-                    {type === TowerType.SWAT && <Shield className={`text-white ${
-                      isMobile ? 'w-4 h-4' : 'w-5 h-5'
-                    }`} />}
+                  <IconImage
+                    src={towerIconSources[type]}
+                    alt={`${stats.name} panda badge`}
+                    className="w-full h-full object-contain"
+                    fallback={getTowerFallbackIcon(type, `${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-white`)}
+                  />
                  </div>
                  <span className={`font-bold text-slate-200 uppercase tracking-wider ${
                    isMobile ? 'text-[10px]' : 'text-xs'
