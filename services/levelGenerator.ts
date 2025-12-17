@@ -4,7 +4,7 @@ import { GRID_WIDTH, GRID_HEIGHT, DEFAULT_LEVEL_PATH, DEFAULT_WAVES } from '../c
 import { GameLevel, Position, EnemyType } from '../types';
 
 export const generateLevel = async (theme: string): Promise<GameLevel> => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.VITE_GEMINI_API_KEY;
   
   if (!apiKey) {
     console.warn("No API Key found. Using default level.");

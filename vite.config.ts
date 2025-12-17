@@ -6,8 +6,9 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: {
-        port: 3000,
+        port: 3004,
         host: '0.0.0.0',
+        allowedHosts: ['motuo.cd-happy-ride.org', 'all']
       },
       plugins: [react()],
       define: {

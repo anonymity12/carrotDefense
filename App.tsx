@@ -50,7 +50,7 @@ const App: React.FC = () => {
         <div className="relative z-10 w-full">
             <h1 className="text-center text-xl font-bold text-blue-500/50 mb-2 uppercase tracking-[0.5em] flex items-center justify-center gap-2">
               <ShieldCheck className="w-4 h-4" />
-              OPERATION: {level.name}
+              堵住摩友: {level.name}
             </h1>
             <Game 
               level={level} 
