@@ -29,33 +29,33 @@ const buildIconSpec = (fileName: string, prompt: string, styleNotes: string, usa
   size: { width: 256, height: 256 },
 });
 
-const pandaLightingNotes = 'soft rim lighting, gentle ambient occlusion, painterly shading, kawaii panda police theme, transparent background';
+const pandaLightingNotes = '3D render, cute chibi panda character, soft studio lighting, 4k resolution, transparent background, circular composition, vibrant colors, isometric view';
 
 export const pandaTowerIconSpecs: Record<TowerType, IconAssetSpec> = {
   [TowerType.AUXILIARY]: buildIconSpec(
     'tower-auxiliary.png',
-    'chibi panda auxiliary police officer blowing a whistle, blue reflective vest, confident stance, simple circular sticker design',
+    'Cute chibi panda auxiliary police officer wearing a blue reflective vest, blowing a silver whistle, holding a small baton, confident expression, circular sticker style',
     pandaLightingNotes,
     'Auxiliary unit token, tower portrait, menu button',
     'tower'
   ),
   [TowerType.TRAFFIC]: buildIconSpec(
     'tower-traffic.png',
-    'chibi panda traffic cop holding a glowing stop sign, yellow vest, friendly smile, icon style',
+    'Cute chibi panda traffic police wearing a neon yellow vest, holding a red STOP sign paddle, directing traffic, friendly smile, circular sticker style',
     pandaLightingNotes,
     'Traffic slow-down unit token and action button art',
     'tower'
   ),
   [TowerType.PATROL]: buildIconSpec(
     'tower-patrol.png',
-    'chibi panda riot patrol on a futuristic bike, blue siren lights, dynamic pose, circular badge layout',
+    'Cute chibi panda riding a cool police motorcycle, blue flashing lights, dynamic action pose, wearing a helmet, circular sticker style',
     pandaLightingNotes,
     'Iron Patrol splash damage unit icon',
     'tower'
   ),
   [TowerType.SWAT]: buildIconSpec(
     'tower-swat.png',
-    'chibi panda SWAT officer with tactical shield, navy armor, heroic pose, cute but powerful',
+    'Cute chibi panda SWAT officer wearing heavy navy blue tactical gear and helmet, holding a large sniper rifle, serious but adorable expression, circular sticker style',
     pandaLightingNotes,
     'SWAT sniper unit icon and upgrade menu art',
     'tower'

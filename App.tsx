@@ -3,19 +3,18 @@ import React, { useState } from 'react';
 import Game from './components/Game';
 import { GameLevel } from './types';
 import { generateLevel } from './services/levelGenerator';
-import { DEFAULT_LEVEL_PATH, DEFAULT_WAVES, GRID_HEIGHT, GRID_WIDTH } from './constants';
+import { DEFAULT_LEVEL_PATH, DEFAULT_MOBILE_LEVEL_PATH, DEFAULT_WAVES, GRID_HEIGHT, GRID_WIDTH, MOBILE_GRID_HEIGHT, MOBILE_GRID_WIDTH } from './constants';
 import { Siren, Bot, ArrowRight, ShieldCheck, AlertCircle, MapPin } from 'lucide-react';
 
-// Default starter level
-const defaultLevel: GameLevel = {
+const getDefaultLevel = (isMobile: boolean): GameLevel => ({
   id: 'lvl-1',
-  name: 'Zang Overpass Checkpoint',
-  gridWidth: GRID_WIDTH,
-  gridHeight: GRID_HEIGHT,
-  path: DEFAULT_LEVEL_PATH,
+  name: '保卫川藏立交',
+  gridWidth: isMobile ? MOBILE_GRID_WIDTH : GRID_WIDTH,
+  gridHeight: isMobile ? MOBILE_GRID_HEIGHT : GRID_HEIGHT,
+  path: isMobile ? DEFAULT_MOBILE_LEVEL_PATH : DEFAULT_LEVEL_PATH,
   waves: DEFAULT_WAVES,
   startingMoney: 450
-};
+});
 
 const App: React.FC = () => {
   const [level, setLevel] = useState<GameLevel | null>(null);
@@ -36,7 +35,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleStartDefault = () => {
-    setLevel(defaultLevel);
+    setLevel(getDefaultLevel(isMobile));
   };
 
   const handleGenerateLevel = async () => {
@@ -45,7 +44,7 @@ const App: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const newLevel = await generateLevel(prompt);
+      const newLevel = await generateLevel(prompt, isMobile);
       setLevel(newLevel);
     } catch (e) {
       setError("Failed to generate operation map. Check connection.");
@@ -56,20 +55,12 @@ const App: React.FC = () => {
 
   if (level) {
     return (
-      <div className={`min-h-screen bg-slate-900 flex items-center justify-center relative overflow-hidden ${
+      <div className={`min-h-screen bg-slate-900 flex ${isMobile ? 'items-start' : 'items-center'} justify-center relative overflow-hidden ${
         isMobile ? 'p-0' : 'p-4'
       }`}>
         {/* Background cityscape */}
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900 via-slate-900 to-black"></div>
         <div className="relative z-10 w-full">
-            <h1 className={`text-center font-bold text-blue-500/50 uppercase flex items-center justify-center gap-2 ${
-              isMobile 
-                ? 'text-sm mb-2 tracking-wider px-4 py-2' 
-                : 'text-xl mb-2 tracking-[0.5em]'
-            }`}>
-              <ShieldCheck className={`${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`} />
-              {isMobile ? level.name : `堵住摩友: ${level.name}`}
-            </h1>
             <Game 
               level={level} 
               onExit={() => setLevel(null)} 
@@ -82,7 +73,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center relative overflow-hidden font-sans ${
-      isMobile ? 'px-4 py-8' : 'px-6'
+      isMobile ? 'px-2 py-2' : 'px-6'
     }`}>
        {/* Background decoration */}
        <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-10 pointer-events-none">

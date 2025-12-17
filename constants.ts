@@ -2,24 +2,36 @@
 import { EnemyType, TowerType, WaveConfig } from './types';
 
 // 动态计算格子大小
-export const calculateCellSize = () => {
+export const calculateCellSize = (gridWidth: number = GRID_WIDTH, gridHeight: number = GRID_HEIGHT) => {
   const screenWidth = window.innerWidth;
   const screenHeight = window.innerHeight;
+  const isMobile = screenWidth < 768;
   
   // 考虑padding和UI元素占用的空间
-  const availableWidth = screenWidth - 32; // 32px padding
-  const availableHeight = screenHeight - 300; // 300px给HUD和控制面板
+  // Mobile: Top HUD (~80px) + Bottom Menu (~120px) + Padding (~20px) + Safety (~30px) = ~250px
+  // Desktop: HUD + Controls = ~300px
+  const reservedHeight = isMobile ? 250 : 300;
+  const paddingX = isMobile ? 16 : 32;
+
+  const availableWidth = screenWidth - paddingX; 
+  const availableHeight = screenHeight - reservedHeight; 
   
-  const cellSizeByWidth = Math.floor(availableWidth / GRID_WIDTH);
-  const cellSizeByHeight = Math.floor(availableHeight / GRID_HEIGHT);
+  const cellSizeByWidth = Math.floor(availableWidth / gridWidth);
+  const cellSizeByHeight = Math.floor(availableHeight / gridHeight);
   
-  // 取较小值确保完全显示，但不小于35px，不大于60px
-  return Math.max(Math.min(Math.min(cellSizeByWidth, cellSizeByHeight), 60), 35);
+  // 取较小值确保完全显示
+  // Mobile min size reduced to 32px to fit smaller screens (iPhone SE etc)
+  const minSize = isMobile ? 30 : 35;
+  const maxSize = 60;
+
+  return Math.max(Math.min(Math.min(cellSizeByWidth, cellSizeByHeight), maxSize), minSize);
 };
 
 export const CELL_SIZE = 60; // 默认桌面端尺寸
 export const GRID_WIDTH = 12;
 export const GRID_HEIGHT = 8;
+export const MOBILE_GRID_WIDTH = 7;
+export const MOBILE_GRID_HEIGHT = 11;
 export const FPS = 60;
 export const MAX_TOWER_LEVEL = 3;
 
@@ -77,6 +89,16 @@ export const DEFAULT_LEVEL_PATH = [
   { x: 5, y: 4 }, { x: 5, y: 5 }, { x: 5, y: 6 }, { x: 6, y: 6 },
   { x: 7, y: 6 }, { x: 8, y: 6 }, { x: 9, y: 6 }, { x: 10, y: 6 },
   { x: 10, y: 5 }, { x: 10, y: 4 }, { x: 11, y: 4 }
+];
+
+export const DEFAULT_MOBILE_LEVEL_PATH = [
+  { x: 3, y: 0 }, { x: 3, y: 1 }, { x: 3, y: 2 }, 
+  { x: 4, y: 2 }, { x: 5, y: 2 },
+  { x: 5, y: 3 }, { x: 5, y: 4 }, { x: 5, y: 5 },
+  { x: 4, y: 5 }, { x: 3, y: 5 }, { x: 2, y: 5 }, { x: 1, y: 5 },
+  { x: 1, y: 6 }, { x: 1, y: 7 }, { x: 1, y: 8 },
+  { x: 2, y: 8 }, { x: 3, y: 8 }, { x: 4, y: 8 }, { x: 5, y: 8 },
+  { x: 5, y: 9 }, { x: 5, y: 10 }
 ];
 
 export const DEFAULT_WAVES: WaveConfig[] = [

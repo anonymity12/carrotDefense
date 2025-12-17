@@ -21,7 +21,8 @@ import {
   Radio,
   FileWarning,
   Menu,
-  X
+  X,
+  ShieldCheck
 } from 'lucide-react';
 import { CELL_SIZE, calculateCellSize, GRID_HEIGHT, GRID_WIDTH, TOWER_STATS, ENEMY_STATS, MAX_TOWER_LEVEL } from '../constants';
 import { Enemy, EnemyType, GameLevel, GameState, TowerType } from '../types';
@@ -93,7 +94,7 @@ interface GameProps {
 }
 
 // 响应式hook
-const useResponsiveGame = () => {
+const useResponsiveGame = (gridWidth: number, gridHeight: number) => {
   const [cellSize, setCellSize] = useState(CELL_SIZE);
   const [isMobile, setIsMobile] = useState(false);
   
@@ -101,19 +102,19 @@ const useResponsiveGame = () => {
     const handleResize = () => {
       const width = window.innerWidth;
       setIsMobile(width < 768);
-      setCellSize(calculateCellSize());
+      setCellSize(calculateCellSize(gridWidth, gridHeight));
     };
     
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [gridWidth, gridHeight]);
   
   return { cellSize, isMobile };
 };
 
 const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
-  const { cellSize, isMobile } = useResponsiveGame();
+  const { cellSize, isMobile } = useResponsiveGame(level.gridWidth, level.gridHeight);
   
   // Game State Ref (Mutable for loop performance)
   const gameState = useRef<GameState>({
@@ -504,53 +505,75 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
   const activeTower = selectedTowerId ? gameState.current.towers.find(t => t.id === selectedTowerId) : null;
 
   return (
-    <div className={`relative w-full mx-auto select-none ${isMobile ? 'p-2' : 'p-4 max-w-5xl'}`}>
+    <div className={`relative w-full mx-auto select-none ${isMobile ? 'p-1' : 'p-4 max-w-5xl'}`}>
       
       {/* Header / HUD */}
-      <div className={`flex justify-between items-center mb-4 bg-slate-900/90 rounded-xl shadow-lg border border-slate-700 backdrop-blur-sm ${
-        isMobile ? 'p-2 flex-col space-y-2' : 'p-4 flex-row'
+      <div className={`flex flex-col mb-1 bg-slate-900/90 rounded-xl shadow-lg border border-slate-700 backdrop-blur-sm ${
+        isMobile ? 'p-1.5 space-y-1' : 'p-4 mb-4'
       }`}>
-        <div className={`flex items-center ${
-          isMobile ? 'w-full justify-between text-sm' : 'space-x-6'
-        }`}>
-           <div className={`flex items-center text-yellow-400 font-bold font-mono ${
-             isMobile ? 'text-sm' : 'text-xl'
+        {/* Top Row: Title + Controls */}
+        <div className="flex justify-between items-center w-full">
+           {/* Title with Marquee if needed */}
+           <div className={`flex items-center font-bold text-blue-500/50 uppercase overflow-hidden whitespace-nowrap ${
+             isMobile ? 'text-sm tracking-wider flex-1 mr-2' : 'text-xl tracking-[0.5em] mr-4'
            }`}>
-             <Coins className={`mr-1 ${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} />
-             {isMobile ? Math.floor(gameState.current.money) : `BUDGET: ${Math.floor(gameState.current.money)}`}
+              <ShieldCheck className={`flex-shrink-0 mr-2 ${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`} />
+              <div className="overflow-x-auto scrollbar-hide">
+                <span className={isMobile ? "animate-marquee inline-block" : ""}>
+                  {isMobile ? level.name : `堵住摩友: ${level.name}`}
+                </span>
+              </div>
            </div>
-           <div className={`flex items-center text-blue-400 font-bold font-mono ${
-             isMobile ? 'text-sm' : 'text-xl'
-           }`}>
-             <Heart className={`mr-1 ${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} />
-             {isMobile ? gameState.current.lives : `SAFETY: ${gameState.current.lives}`}
-           </div>
-           <div className={`flex items-center text-slate-300 font-bold font-mono ${
-             isMobile ? 'text-sm' : 'text-xl'
-           }`}>
-             <Siren className={`mr-1 text-red-500 animate-pulse ${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} />
-             {gameState.current.waveIndex + 1}/{gameState.current.level.waves.length}
+
+           {/* Controls */}
+           <div className="flex items-center space-x-2 flex-shrink-0">
+             {isMobile && (
+               <button onClick={() => setShowMobileMenu(!showMobileMenu)} className={`bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 transition ${
+                 isMobile ? 'p-1.5' : 'p-2'
+               }`}>
+                 {showMobileMenu ? <X className={`${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} /> : <Menu className={`${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} />}
+               </button>
+             )}
+             <button onClick={togglePause} className={`bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 transition ${
+               isMobile ? 'p-1.5' : 'p-2'
+             }`}>
+               {gameState.current.isPlaying ? <Pause className={`${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} /> : <Play className={`${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} />}
+             </button>
+             <button onClick={onRestart} className={`bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 transition ${
+               isMobile ? 'p-1.5' : 'p-2'
+             }`}>
+               <RotateCcw className={`${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} />
+             </button>
+             <button onClick={onExit} className={`bg-red-900/80 border border-red-800 rounded-lg hover:bg-red-800 font-bold transition ${
+               isMobile ? 'px-2 py-1 text-[10px]' : 'px-4 py-2 text-sm'
+             }`}>
+               {isMobile ? 'EXIT' : 'ABORT'}
+             </button>
            </div>
         </div>
 
-        <div className={`flex items-center space-x-2 ${
-          isMobile ? 'w-full justify-center' : ''
+        {/* Bottom Row: Stats */}
+        <div className={`flex items-center ${
+          isMobile ? 'w-full justify-between text-sm border-t border-slate-800 pt-2' : 'space-x-6 mt-2'
         }`}>
-           <button onClick={togglePause} className={`bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 transition ${
-             isMobile ? 'p-2' : 'p-2'
+           <div className={`flex items-center text-yellow-400 font-bold font-mono ${
+             isMobile ? 'text-xs' : 'text-xl'
            }`}>
-             {gameState.current.isPlaying ? <Pause className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'}`} /> : <Play className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'}`} />}
-           </button>
-           <button onClick={onRestart} className={`bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 transition ${
-             isMobile ? 'p-2' : 'p-2'
+             <Coins className={`mr-1 ${isMobile ? 'w-3 h-3' : 'w-6 h-6'}`} />
+             {isMobile ? Math.floor(gameState.current.money) : `BUDGET: ${Math.floor(gameState.current.money)}`}
+           </div>
+           <div className={`flex items-center text-blue-400 font-bold font-mono ${
+             isMobile ? 'text-xs' : 'text-xl'
            }`}>
-             <RotateCcw className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'}`} />
-           </button>
-           <button onClick={onExit} className={`bg-red-900/80 border border-red-800 rounded-lg hover:bg-red-800 font-bold transition ${
-             isMobile ? 'px-3 py-2 text-xs' : 'px-4 py-2 text-sm'
+             <Heart className={`mr-1 ${isMobile ? 'w-3 h-3' : 'w-6 h-6'}`} />
+             {isMobile ? gameState.current.lives : `SAFETY: ${gameState.current.lives}`}
+           </div>
+           <div className={`flex items-center text-slate-300 font-bold font-mono ${
+             isMobile ? 'text-xs' : 'text-xl'
            }`}>
-             {isMobile ? 'EXIT' : 'ABORT'}
-           </button>
+             <Siren className={`mr-1 text-red-500 animate-pulse ${isMobile ? 'w-3 h-3' : 'w-6 h-6'}`} />
+             {gameState.current.waveIndex + 1}/{gameState.current.level.waves.length}
+           </div>
         </div>
       </div>
 
@@ -559,8 +582,8 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
         isMobile ? 'rounded-lg border-2 border-slate-800' : 'rounded-2xl border-4 border-slate-800'
       }`}
            style={{ 
-             width: GRID_WIDTH * cellSize, 
-             height: GRID_HEIGHT * cellSize,
+             width: level.gridWidth * cellSize, 
+             height: level.gridHeight * cellSize,
              touchAction: 'manipulation' // 优化触控响应
            }}>
         
@@ -621,7 +644,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
          )}
 
          {/* Start Marker */}
-         <div className="absolute flex flex-col items-center justify-center z-10"
+         <div className="absolute flex flex-col items-center justify-center z-20"
               style={{ 
                 width: cellSize, 
                 height: cellSize, 
@@ -637,7 +660,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
          </div>
 
          {/* End Marker: Zang Overpass */}
-         <div className="absolute flex items-center justify-center z-0"
+         <div className="absolute flex items-center justify-center z-20"
               style={{ 
                 width: cellSize, 
                 height: cellSize, 
@@ -669,8 +692,8 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
          </div>
 
         {/* The Grid Layer */}
-        {Array.from({ length: GRID_HEIGHT }).map((_, y) => (
-          Array.from({ length: GRID_WIDTH }).map((_, x) => (
+        {Array.from({ length: level.gridHeight }).map((_, y) => (
+          Array.from({ length: level.gridWidth }).map((_, x) => (
             <div
               key={`${x}-${y}`}
               onClick={() => handleGridClick(x, y)}
@@ -911,16 +934,6 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
           ? 'fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-sm border-t border-slate-700 p-3 z-50' 
           : 'mt-6 space-x-4'
       }`}>
-        {isMobile && (
-          <div className="absolute top-2 right-4">
-            <button 
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="p-2 bg-slate-800 rounded-full border border-slate-600"
-            >
-              {showMobileMenu ? <X className="w-5 h-5 text-white" /> : <Menu className="w-5 h-5 text-white" />}
-            </button>
-          </div>
-        )}
         
         <div className={`flex ${
           isMobile 

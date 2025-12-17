@@ -1,28 +1,31 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { GRID_WIDTH, GRID_HEIGHT, DEFAULT_LEVEL_PATH, DEFAULT_WAVES } from '../constants';
+import { GRID_WIDTH, GRID_HEIGHT, MOBILE_GRID_WIDTH, MOBILE_GRID_HEIGHT, DEFAULT_LEVEL_PATH, DEFAULT_MOBILE_LEVEL_PATH, DEFAULT_WAVES } from '../constants';
 import { GameLevel, Position, EnemyType } from '../types';
 
-export const generateLevel = async (theme: string): Promise<GameLevel> => {
+export const generateLevel = async (theme: string, isMobile: boolean = false): Promise<GameLevel> => {
   const apiKey = process.env.VITE_GEMINI_API_KEY;
   
   if (!apiKey) {
     console.warn("No API Key found. Using default level.");
-    return createDefaultLevel();
+    return createDefaultLevel(isMobile);
   }
 
   const ai = new GoogleGenAI({ apiKey });
+  
+  const width = isMobile ? MOBILE_GRID_WIDTH : GRID_WIDTH;
+  const height = isMobile ? MOBILE_GRID_HEIGHT : GRID_HEIGHT;
 
   const prompt = `
     Create a 'Tower Defense' style Traffic Control simulation level.
-    Grid Size: ${GRID_WIDTH}x${GRID_HEIGHT}.
+    Grid Size: ${width}x${height}.
     Theme: "${theme}".
     The goal is to intercept illegal motorcycles on a road network.
     
     Requirements:
     1. 'path': An ordered array of coordinates {x, y} representing the road.
-       - Must start at x=0.
-       - Must end at x=${GRID_WIDTH - 1}.
+       - Must start at ${isMobile ? 'y=0 (top edge)' : 'x=0 (left edge)'}.
+       - Must end at ${isMobile ? `y=${height - 1} (bottom edge)` : `x=${width - 1} (right edge)`}.
        - Must be contiguous (no diagonals).
        - Must not intersect itself.
     2. 'waves': An array of 3 wave configurations.
@@ -36,7 +39,7 @@ export const generateLevel = async (theme: string): Promise<GameLevel> => {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash-exp",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -83,13 +86,13 @@ export const generateLevel = async (theme: string): Promise<GameLevel> => {
       }
     });
 
-    const data = JSON.parse(response.text);
+    const data = JSON.parse(response.text());
 
     return {
       id: `gen-${Date.now()}`,
       name: data.levelName || "Traffic Control Zone",
-      gridWidth: GRID_WIDTH,
-      gridHeight: GRID_HEIGHT,
+      gridWidth: width,
+      gridHeight: height,
       path: data.path,
       waves: data.waves.map((w: any) => ({
         ...w,
@@ -103,16 +106,16 @@ export const generateLevel = async (theme: string): Promise<GameLevel> => {
 
   } catch (error) {
     console.error("Gemini Level Gen Failed:", error);
-    return createDefaultLevel();
+    return createDefaultLevel(isMobile);
   }
 };
 
-const createDefaultLevel = (): GameLevel => ({
+const createDefaultLevel = (isMobile: boolean): GameLevel => ({
   id: 'default',
   name: 'City Ring Road',
-  gridWidth: GRID_WIDTH,
-  gridHeight: GRID_HEIGHT,
-  path: DEFAULT_LEVEL_PATH,
+  gridWidth: isMobile ? MOBILE_GRID_WIDTH : GRID_WIDTH,
+  gridHeight: isMobile ? MOBILE_GRID_HEIGHT : GRID_HEIGHT,
+  path: isMobile ? DEFAULT_MOBILE_LEVEL_PATH : DEFAULT_LEVEL_PATH,
   waves: DEFAULT_WAVES,
   startingMoney: 450
 });

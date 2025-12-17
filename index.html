@@ -62,6 +62,16 @@
       * {
         touch-action: manipulation;
       }
+
+      /* Marquee Animation */
+      @keyframes marquee {
+        0% { transform: translateX(100%); }
+        100% { transform: translateX(-100%); }
+      }
+      .animate-marquee {
+        animation: marquee 10s linear infinite;
+        white-space: nowrap;
+      }
     </style>
   <script type="module" src="/index.tsx"></script>
 </head>
