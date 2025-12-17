@@ -22,8 +22,11 @@ import {
   FileWarning,
   Menu,
   X,
-  ShieldCheck
+  ShieldCheck,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
+import { soundManager } from '../services/SoundManager';
 import { CELL_SIZE, calculateCellSize, GRID_HEIGHT, GRID_WIDTH, TOWER_STATS, ENEMY_STATS, MAX_TOWER_LEVEL } from '../constants';
 import { Enemy, EnemyType, GameLevel, GameState, TowerType } from '../types';
 import { pandaTowerIconSpecs, pandaEnemyIconSpecs } from '../assets/iconManifest';
@@ -138,6 +141,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
   const [hoverCell, setHoverCell] = useState<{x: number, y: number} | null>(null);
   const [selectedForPreview, setSelectedForPreview] = useState<{x: number, y: number} | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   // Loop Control
   const requestRef = useRef<number>(0);
@@ -160,6 +164,11 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
       gameSpeed: 1,
     };
     prepareWave(0);
+    
+    soundManager.startBGM();
+    return () => {
+      soundManager.stopBGM();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [level]);
 
@@ -309,6 +318,8 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
           slowDuration: tower.type === TowerType.TRAFFIC ? 90 : 0
         });
         
+        soundManager.playShoot(tower.type);
+
         const baseSpeed = stats.speed;
         const fireRateMod = Math.pow(0.9, tower.level - 1); 
         const maxCooldown = baseSpeed * fireRateMod;
@@ -331,6 +342,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
       const d = dist(p.x, p.y, target.x, target.y);
       if (d < p.speed) {
         // Hit
+        soundManager.playHit();
         if (p.splashRadius && p.splashRadius > 0) {
            state.enemies.forEach(e => {
              if (dist(e.x, e.y, target.x, target.y) <= (p.splashRadius || 0)) {
@@ -487,6 +499,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
   };
 
   const togglePause = () => {
+    soundManager.init();
     gameState.current.isPlaying = !gameState.current.isPlaying;
     setRenderTrigger(prev => prev + 1);
   };
@@ -534,6 +547,11 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
                  {showMobileMenu ? <X className={`${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} /> : <Menu className={`${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} />}
                </button>
              )}
+             <button onClick={() => setIsMuted(soundManager.toggleMute())} className={`bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 transition ${
+               isMobile ? 'p-1.5' : 'p-2'
+             }`}>
+               {isMuted ? <VolumeX className={`${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} /> : <Volume2 className={`${isMobile ? 'w-4 h-4' : 'w-6 h-6'}`} />}
+             </button>
              <button onClick={togglePause} className={`bg-slate-800 border border-slate-700 rounded-full hover:bg-slate-700 transition ${
                isMobile ? 'p-1.5' : 'p-2'
              }`}>
