@@ -2,19 +2,200 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# 🚦 摩法交通卫士 - 网络对战版
 
-This contains everything you need to run your app locally.
+Traffic Guard: Zang Overpass - Network Battle Edition
 
-View your app in AI Studio: https://ai.studio/apps/drive/1sOTtoW6zLLGtn9cgTjaqdbenYrqdVmb6
+## 项目简介
 
-## Run Locally
+这是一个基于塔防玩法的1v1网络对战游戏。游戏以城市交通管理为背景，进攻方需要派遣各种交通工具穿越防线到达目的地，防守方则需要部署防卫单位进行拦截。
 
-**Prerequisites:**  Node.js
+### 游戏特色
 
+- **双人对战**: 实时1v1对战，进攻方 vs 防守方
+- **策略选择**: 不同的车辆类型、车道选择和防卫单位组合
+- **实时同步**: 基于 WebSocket 的60fps实时游戏同步
+- **平衡设计**: 精心设计的游戏平衡性，速度与隐蔽性的权衡
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 技术架构
+
+### 后端
+- **语言**: TypeScript
+- **运行时**: Node.js
+- **通信**: WebSocket (ws)
+- **游戏循环**: 60 FPS
+
+### 前端
+- **框架**: React + TypeScript
+- **构建工具**: Vite
+- **游戏引擎**: 计划集成 PhaserJS
+
+## 快速开始
+
+### 前提条件
+
+- Node.js 18+
+- npm 或 yarn
+
+### 启动后端服务器
+
+```bash
+# 进入后端目录
+cd backend
+
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+```
+
+服务器将在 `ws://localhost:8080` 启动。
+
+### 启动前端（单机版）
+
+```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+```
+
+### 测试网络对战
+
+1. 启动后端服务器（见上）
+2. 在浏览器中打开 `test-client.html`
+3. 打开两个浏览器标签页
+4. 在标签页1创建房间（选择进攻方或防守方）
+5. 在标签页2加入房间（选择另一角色）
+6. 双方点击"准备"开始游戏
+
+## 游戏机制
+
+### 进攻方（Player 1）
+
+**目标**: 让至少10辆车到达目的地
+
+**初始预算**: 500金币
+
+**可选车辆**:
+- 有证摩托车 (50金币) - 速度快，容易被击中
+- 无证摩托车 (40金币) - 速度较快，较容易被击中
+- 电动摩托车 (30金币) - 速度中等，不太容易被击中
+- 电动自行车 (20金币) - 速度慢，难以被击中
+
+**可选车道**:
+- 主道 - 速度+30%，被击中概率+20%
+- 辅道 - 标准速度和被击中概率
+- 非机动车道 - 速度-30%，被击中概率-30%
+
+### 防守方（Player 2）
+
+**目标**: 拦截车辆，不让超过10辆到达目的地
+
+**初始预算**: 600金币
+
+**可用单位**:
+- 辅警 (100金币) - 基础单位，射速快
+- 交警 (180金币) - 减速效果
+- 铁骑 (250金币) - 范围伤害
+- 特警 (350金币) - 高伤害，射速慢
+
+**单位操作**:
+- 放置单位（消耗预算）
+- 升级单位（提升属性）
+- 出售单位（返还70%投入）
+
+## 项目结构
+
+```
+carrotDefense/
+├── backend/                    # 后端服务器
+│   ├── src/
+│   │   ├── config/            # 游戏配置
+│   │   ├── services/          # 核心服务（服务器、引擎、房间管理）
+│   │   ├── types/             # 类型定义
+│   │   └── index.ts           # 入口文件
+│   ├── package.json
+│   └── README.md              # 后端文档
+├── src/                       # 前端源码
+│   ├── components/            # React 组件
+│   ├── network/               # 网络客户端
+│   ├── services/              # 服务
+│   └── ...
+├── documents/                 # 文档
+│   ├── 网络对战架构文档.md     # 架构说明
+│   ├── 使用指南.md            # 使用指南
+│   └── ...
+├── test-client.html           # 测试客户端
+└── README.md                  # 本文件
+```
+
+## 文档
+
+- [后端 API 文档](backend/README.md)
+- [网络对战架构文档](documents/网络对战架构文档.md)
+- [使用指南](documents/使用指南.md)
+- [玩法说明书](documents/玩法说明书.md)
+
+## 开发路线图
+
+### ✅ Phase 1 - 后端实现（已完成）
+- [x] TypeScript 后端服务器
+- [x] WebSocket 通信协议
+- [x] 游戏引擎（车辆移动、攻击、碰撞检测）
+- [x] 房间管理系统
+- [x] 60 FPS 游戏循环
+
+### ✅ Phase 2 - 游戏模型（已完成）
+- [x] 双玩家角色系统
+- [x] 车辆类型和车道系统
+- [x] 防卫单位系统
+- [x] 胜负判定逻辑
+- [x] 网络客户端库
+
+### 🚧 Phase 3 - 前端集成（进行中）
+- [x] 网络客户端实现
+- [ ] PhaserJS 游戏框架集成
+- [ ] 双玩家UI界面
+- [ ] 房间大厅系统
+- [ ] 实时游戏渲染
+
+### 📋 Phase 4 - 功能增强（计划中）
+- [ ] 玩家账号系统
+- [ ] 排行榜
+- [ ] 回放系统
+- [ ] 聊天功能
+- [ ] 观战模式
+
+## 如何贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+### 开发指南
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
+
+### 代码规范
+
+- 使用 TypeScript
+- 遵循现有代码风格
+- 添加必要的注释（中文）
+- 编写单元测试（如适用）
+
+## 许可证
+
+MIT
+
+## 致谢
+
+感谢所有为这个项目做出贡献的开发者！
+
+---
+
+**注意**: 本项目仍在积极开发中，API 可能会有变化。建议查看具体文档以获取最新信息。

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络对战游戏 - 测试客户端</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            width: 100%;
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .section h2 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .status {
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .status-value {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+        }
+
+        .log-entry.info {
+            color: #4ec9b0;
+        }
+
+        .log-entry.error {
+            color: #f48771;
+        }
+
+        .log-entry.success {
+            color: #b5cea8;
+        }
+
+        .connected {
+            color: #48bb78;
+        }
+
+        .disconnected {
+            color: #f56565;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚦 摩法交通卫士 - 网络对战测试</h1>
+        <p class="subtitle">Network Battle Game Test Client</p>
+
+        <!-- 连接状态 -->
+        <div class="section">
+            <h2>📡 连接状态</h2>
+            <div class="status">
+                <div class="status-item">
+                    <span class="status-label">服务器地址:</span>
+                    <span class="status-value">ws://localhost:8080</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">连接状态:</span>
+                    <span id="connectionStatus" class="status-value disconnected">未连接</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">房间ID:</span>
+                    <span id="roomId" class="status-value">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">玩家ID:</span>
+                    <span id="playerId" class="status-value">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">角色:</span>
+                    <span id="role" class="status-value">-</span>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="connectBtn">连接服务器</button>
+                <button id="disconnectBtn" disabled>断开连接</button>
+            </div>
+        </div>
+
+        <!-- 房间操作 -->
+        <div class="section">
+            <h2>🏠 房间操作</h2>
+            <div class="grid">
+                <div>
+                    <p style="margin-bottom: 10px; color: #555; font-weight: 600;">创建房间</p>
+                    <input type="text" id="playerName1" placeholder="玩家名称" value="测试玩家1">
+                    <div class="controls" style="margin-top: 10px;">
+                        <button id="createAttackerBtn" disabled>创建房间（进攻方）</button>
+                        <button id="createDefenderBtn" disabled>创建房间（防守方）</button>
+                    </div>
+                </div>
+                <div>
+                    <p style="margin-bottom: 10px; color: #555; font-weight: 600;">加入房间</p>
+                    <input type="text" id="joinRoomId" placeholder="房间ID">
+                    <input type="text" id="playerName2" placeholder="玩家名称" value="测试玩家2" style="margin-top: 10px;">
+                    <div class="controls" style="margin-top: 10px;">
+                        <button id="joinAttackerBtn" disabled>加入（进攻方）</button>
+                        <button id="joinDefenderBtn" disabled>加入（防守方）</button>
+                    </div>
+                </div>
+            </div>
+            <div class="controls" style="margin-top: 15px;">
+                <button id="readyBtn" disabled>准备</button>
+                <button id="leaveBtn" disabled>离开房间</button>
+            </div>
+        </div>
+
+        <!-- 游戏操作 -->
+        <div class="section">
+            <h2>🎮 游戏操作</h2>
+            <div class="grid">
+                <div>
+                    <p style="margin-bottom: 10px; color: #555; font-weight: 600;">进攻方操作</p>
+                    <div class="controls">
+                        <button id="spawnBike" disabled>派电动车(非机动)</button>
+                        <button id="spawnMotorcycle" disabled>派摩托车(主道)</button>
+                    </div>
+                </div>
+                <div>
+                    <p style="margin-bottom: 10px; color: #555; font-weight: 600;">防守方操作</p>
+                    <div class="controls">
+                        <button id="placeAuxiliary" disabled>放置辅警</button>
+                        <button id="placeTraffic" disabled>放置交警</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 日志 -->
+        <div class="section">
+            <h2>📋 控制台日志</h2>
+            <div class="log" id="logContainer"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // 注意：这是一个简化的测试客户端
+        // 实际使用时需要导入完整的 NetworkGameClient
+        // 
+        // 在生产环境中的用法：
+        // import { NetworkGameClient } from './src/network/NetworkGameClient';
+        // import { PlayerRole, MessageType } from './src/network/types';
+        // const client = new NetworkGameClient('ws://localhost:8080');
+        // await client.connect();
+        
+        const log = (message, type = 'info') => {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        };
+
+        const updateStatus = (field, value) => {
+            document.getElementById(field).textContent = value;
+        };
+
+        // WebSocket 客户端（简化版）
+        let ws = null;
+        let clientState = {
+            connected: false,
+            roomId: null,
+            playerId: null,
+            role: null
+        };
+
+        // 连接按钮
+        document.getElementById('connectBtn').addEventListener('click', () => {
+            try {
+                ws = new WebSocket('ws://localhost:8080');
+                
+                ws.onopen = () => {
+                    log('✓ 成功连接到服务器', 'success');
+                    clientState.connected = true;
+                    updateStatus('connectionStatus', '已连接');
+                    document.getElementById('connectionStatus').className = 'status-value connected';
+                    
+                    // 更新按钮状态
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                    document.getElementById('createAttackerBtn').disabled = false;
+                    document.getElementById('createDefenderBtn').disabled = false;
+                    document.getElementById('joinAttackerBtn').disabled = false;
+                    document.getElementById('joinDefenderBtn').disabled = false;
+                };
+
+                ws.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    log(`← 收到消息: ${message.type}`, 'info');
+                    handleMessage(message);
+                };
+
+                ws.onclose = () => {
+                    log('✗ 与服务器断开连接', 'error');
+                    clientState.connected = false;
+                    updateStatus('connectionStatus', '未连接');
+                    document.getElementById('connectionStatus').className = 'status-value disconnected';
+                    
+                    // 更新按钮状态
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                    disableAllGameButtons();
+                };
+
+                ws.onerror = (error) => {
+                    log('✗ WebSocket 错误', 'error');
+                    console.error(error);
+                };
+            } catch (error) {
+                log(`✗ 连接失败: ${error.message}`, 'error');
+            }
+        });
+
+        // 断开连接
+        document.getElementById('disconnectBtn').addEventListener('click', () => {
+            if (ws) {
+                ws.close();
+            }
+        });
+
+        // 发送消息
+        const sendMessage = (message) => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                message.timestamp = Date.now();
+                ws.send(JSON.stringify(message));
+                log(`→ 发送消息: ${message.type}`, 'info');
+            } else {
+                log('✗ 未连接到服务器', 'error');
+            }
+        };
+
+        // 处理消息
+        const handleMessage = (message) => {
+            switch (message.type) {
+                case 'CREATE_ROOM':
+                case 'JOIN_ROOM':
+                    clientState.roomId = message.roomId;
+                    clientState.playerId = message.playerId;
+                    updateStatus('roomId', message.roomId);
+                    updateStatus('playerId', message.playerId);
+                    log(`✓ 房间ID: ${message.roomId}`, 'success');
+                    
+                    // 启用游戏控制
+                    document.getElementById('readyBtn').disabled = false;
+                    document.getElementById('leaveBtn').disabled = false;
+                    break;
+
+                case 'GAME_START':
+                    log('✓ 游戏开始！', 'success');
+                    enableGameButtons();
+                    break;
+
+                case 'GAME_STATE_UPDATE':
+                    // 显示游戏状态
+                    const state = message.state;
+                    log(`状态: 预算=${clientState.role === 'ATTACKER' ? state.attackerBudget : state.defenderBudget}, 车辆=${state.vehicles.length}, 单位=${state.defenseUnits.length}`);
+                    break;
+
+                case 'GAME_OVER':
+                    log(`✓ 游戏结束！胜者: ${message.winner}`, 'success');
+                    log(`原因: ${message.reason}`, 'info');
+                    disableAllGameButtons();
+                    break;
+
+                case 'ERROR':
+                    log(`✗ 错误: ${message.message}`, 'error');
+                    break;
+            }
+        };
+
+        // 创建房间（进攻方）
+        document.getElementById('createAttackerBtn').addEventListener('click', () => {
+            const playerName = document.getElementById('playerName1').value || '测试玩家1';
+            clientState.role = 'ATTACKER';
+            updateStatus('role', '进攻方');
+            sendMessage({
+                type: 'CREATE_ROOM',
+                playerName: playerName,
+                role: 'ATTACKER'
+            });
+        });
+
+        // 创建房间（防守方）
+        document.getElementById('createDefenderBtn').addEventListener('click', () => {
+            const playerName = document.getElementById('playerName1').value || '测试玩家1';
+            clientState.role = 'DEFENDER';
+            updateStatus('role', '防守方');
+            sendMessage({
+                type: 'CREATE_ROOM',
+                playerName: playerName,
+                role: 'DEFENDER'
+            });
+        });
+
+        // 加入房间（进攻方）
+        document.getElementById('joinAttackerBtn').addEventListener('click', () => {
+            const roomId = document.getElementById('joinRoomId').value;
+            const playerName = document.getElementById('playerName2').value || '测试玩家2';
+            if (!roomId) {
+                log('✗ 请输入房间ID', 'error');
+                return;
+            }
+            clientState.role = 'ATTACKER';
+            updateStatus('role', '进攻方');
+            sendMessage({
+                type: 'JOIN_ROOM',
+                roomId: roomId,
+                playerName: playerName,
+                role: 'ATTACKER'
+            });
+        });
+
+        // 加入房间（防守方）
+        document.getElementById('joinDefenderBtn').addEventListener('click', () => {
+            const roomId = document.getElementById('joinRoomId').value;
+            const playerName = document.getElementById('playerName2').value || '测试玩家2';
+            if (!roomId) {
+                log('✗ 请输入房间ID', 'error');
+                return;
+            }
+            clientState.role = 'DEFENDER';
+            updateStatus('role', '防守方');
+            sendMessage({
+                type: 'JOIN_ROOM',
+                roomId: roomId,
+                playerName: playerName,
+                role: 'DEFENDER'
+            });
+        });
+
+        // 准备
+        document.getElementById('readyBtn').addEventListener('click', () => {
+            sendMessage({
+                type: 'PLAYER_READY',
+                ready: true
+            });
+            log('✓ 已设置为准备状态', 'success');
+        });
+
+        // 离开房间
+        document.getElementById('leaveBtn').addEventListener('click', () => {
+            sendMessage({
+                type: 'LEAVE_ROOM',
+                roomId: clientState.roomId
+            });
+            clientState.roomId = null;
+            clientState.playerId = null;
+            clientState.role = null;
+            updateStatus('roomId', '-');
+            updateStatus('playerId', '-');
+            updateStatus('role', '-');
+            disableAllGameButtons();
+        });
+
+        // 派出电动自行车
+        document.getElementById('spawnBike').addEventListener('click', () => {
+            sendMessage({
+                type: 'SPAWN_VEHICLE',
+                vehicleType: 'ELECTRIC_BIKE',
+                lane: 'NON_MOTORIZED'
+            });
+        });
+
+        // 派出摩托车
+        document.getElementById('spawnMotorcycle').addEventListener('click', () => {
+            sendMessage({
+                type: 'SPAWN_VEHICLE',
+                vehicleType: 'MOTORCYCLE_WITH_PERMIT',
+                lane: 'MAIN_ROAD'
+            });
+        });
+
+        // 放置辅警
+        document.getElementById('placeAuxiliary').addEventListener('click', () => {
+            const x = Math.floor(Math.random() * 12);
+            const y = Math.floor(Math.random() * 8);
+            sendMessage({
+                type: 'PLACE_DEFENSE',
+                unitType: 'AUXILIARY',
+                position: { x, y }
+            });
+        });
+
+        // 放置交警
+        document.getElementById('placeTraffic').addEventListener('click', () => {
+            const x = Math.floor(Math.random() * 12);
+            const y = Math.floor(Math.random() * 8);
+            sendMessage({
+                type: 'PLACE_DEFENSE',
+                unitType: 'TRAFFIC',
+                position: { x, y }
+            });
+        });
+
+        const enableGameButtons = () => {
+            if (clientState.role === 'ATTACKER') {
+                document.getElementById('spawnBike').disabled = false;
+                document.getElementById('spawnMotorcycle').disabled = false;
+            } else if (clientState.role === 'DEFENDER') {
+                document.getElementById('placeAuxiliary').disabled = false;
+                document.getElementById('placeTraffic').disabled = false;
+            }
+        };
+
+        const disableAllGameButtons = () => {
+            document.getElementById('spawnBike').disabled = true;
+            document.getElementById('spawnMotorcycle').disabled = true;
+            document.getElementById('placeAuxiliary').disabled = true;
+            document.getElementById('placeTraffic').disabled = true;
+            document.getElementById('readyBtn').disabled = true;
+            document.getElementById('leaveBtn').disabled = true;
+            document.getElementById('createAttackerBtn').disabled = true;
+            document.getElementById('createDefenderBtn').disabled = true;
+            document.getElementById('joinAttackerBtn').disabled = true;
+            document.getElementById('joinDefenderBtn').disabled = true;
+        };
+
+        // 初始化日志
+        log('网络对战游戏测试客户端已启动', 'success');
+        log('请先点击"连接服务器"按钮', 'info');
+    </script>
+</body>
+</html>
