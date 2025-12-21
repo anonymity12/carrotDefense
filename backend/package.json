@@ -1,0 +1,27 @@
+{
+  "name": "carrot-defense-backend",
+  "version": "1.0.0",
+  "description": "Backend server for network battle game - Traffic Guard",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts"
+  },
+  "keywords": ["game", "websocket", "multiplayer", "tower-defense"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/ws": "^8.5.10",
+    "@types/uuid": "^9.0.8",
+    "typescript": "^5.8.2",
+    "tsx": "^4.7.1"
+  }
+}
