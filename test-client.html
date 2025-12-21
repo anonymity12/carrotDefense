@@ -275,6 +275,12 @@
     <script type="module">
         // 注意：这是一个简化的测试客户端
         // 实际使用时需要导入完整的 NetworkGameClient
+        // 
+        // 在生产环境中的用法：
+        // import { NetworkGameClient } from './src/network/NetworkGameClient';
+        // import { PlayerRole, MessageType } from './src/network/types';
+        // const client = new NetworkGameClient('ws://localhost:8080');
+        // await client.connect();
         
         const log = (message, type = 'info') => {
             const logContainer = document.getElementById('logContainer');

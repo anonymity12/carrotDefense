@@ -521,7 +521,6 @@ export class GameEngine {
         // 给防守方奖励
         if (room.defender) {
           room.defender.score++;
-          // 可以考虑给予金币奖励
         }
         
         vehiclesToRemove.push(i);

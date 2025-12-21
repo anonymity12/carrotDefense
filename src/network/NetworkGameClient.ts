@@ -72,10 +72,10 @@ export class NetworkGameClient {
 
         this.ws.onerror = (error) => {
           console.error('[NetworkClient] WebSocket 错误:', error);
-          reject(error);
+          reject(new Error('WebSocket 连接失败，请检查服务器是否正在运行'));
         };
       } catch (error) {
-        reject(error);
+        reject(new Error(`创建 WebSocket 连接失败: ${error instanceof Error ? error.message : String(error)}`));
       }
     });
   }
