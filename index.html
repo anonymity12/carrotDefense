@@ -6,76 +6,35 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0f172a" />
-    <title>川藏立交保护者</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>川藏立交保护者 - Phaser Edition</title>
     <style>
-      @keyframes wiggle {
-        0%, 100% { transform: rotate(-3deg); }
-        50% { transform: rotate(3deg); }
-      }
-      .animate-wiggle {
-        animation: wiggle 0.5s ease-in-out infinite;
-      }
-      @keyframes pop {
-        0% { transform: scale(0.8); opacity: 0; }
-        100% { transform: scale(1); opacity: 1; }
-      }
-      .animate-pop {
-        animation: pop 0.2s ease-out forwards;
-      }
-      /* Hide scrollbar for game container */
-      .no-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
-      .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
       
-      /* Mobile optimizations */
-      .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-      }
-      .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
+      body {
+        background-color: #0f172a;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
       }
       
-      /* Better touch targets */
-      @media (max-width: 768px) {
-        * {
-          -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
-        }
-        
-        button, .cursor-pointer {
-          min-height: 44px;
-          min-width: 44px;
-        }
-        
-        /* Safe area padding for newer phones */
-        .pb-safe {
-          padding-bottom: env(safe-area-inset-bottom);
-        }
+      #root {
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
       }
       
       /* Disable zoom on double tap */
       * {
         touch-action: manipulation;
-      }
-
-      /* Marquee Animation */
-      @keyframes marquee {
-        0% { transform: translateX(100%); }
-        100% { transform: translateX(-100%); }
-      }
-      .animate-marquee {
-        animation: marquee 10s linear infinite;
-        white-space: nowrap;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
       }
     </style>
-  <script type="module" src="/index.tsx"></script>
-</head>
-  <body class="bg-slate-900 text-white overflow-hidden">
+    <script type="module" src="/index.tsx"></script>
+  </head>
+  <body>
     <div id="root"></div>
   </body>
 </html>
