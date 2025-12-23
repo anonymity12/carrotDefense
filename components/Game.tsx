@@ -389,7 +389,7 @@ const Game: React.FC<GameProps> = ({ level, onExit, onRestart }) => {
   useEffect(() => {
     requestRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(requestRef.current);
-  }, []);
+  }, []);// react doc: empty arrary to run once when mounted ; if no paramter, means every time will run; if has dependency, will run when dependency change
 
   // 触控优化的网格点击处理
   const handleGridClick = useCallback((x: number, y: number) => {
