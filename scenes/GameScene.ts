@@ -41,12 +41,15 @@ export default class GameScene extends Phaser.Scene {
   // Grid overlay
   private gridCells: Phaser.GameObjects.Rectangle[][] = [];
 
+  private onExitCallback?: () => void;
+
   constructor() {
     super({ key: 'GameScene' });
   }
 
-  init(data: { level: GameLevel }) {
+  init(data: { level: GameLevel; onExit?: () => void }) {
     this.level = data.level;
+    this.onExitCallback = data.onExit;
     this.isMobile = this.scale.width < 768;
     this.cellSize = calculateCellSize(this.level.gridWidth, this.level.gridHeight);
   }
@@ -175,20 +178,34 @@ export default class GameScene extends Phaser.Scene {
     
     this.pathGraphics.strokePath();
     
-    // Draw lane markings
+    // Draw lane markings (dashed line)
     this.pathGraphics.lineStyle(Math.max(2, this.cellSize * 0.05), 0xfbbf24, 0.5);
-    this.pathGraphics.setLineStyle(Math.max(2, this.cellSize * 0.05), 0xfbbf24, 0.5, 1, [this.cellSize * 0.15, this.cellSize * 0.15]);
     this.pathGraphics.beginPath();
     
-    for (let i = 0; i < this.level.path.length; i++) {
-      const p = this.level.path[i];
-      const px = offsetX + p.x * this.cellSize + this.cellSize / 2;
-      const py = offsetY + p.y * this.cellSize + this.cellSize / 2;
+    // Draw dashed line manually
+    for (let i = 0; i < this.level.path.length - 1; i++) {
+      const p1 = this.level.path[i];
+      const p2 = this.level.path[i + 1];
+      const px1 = offsetX + p1.x * this.cellSize + this.cellSize / 2;
+      const py1 = offsetY + p1.y * this.cellSize + this.cellSize / 2;
+      const px2 = offsetX + p2.x * this.cellSize + this.cellSize / 2;
+      const py2 = offsetY + p2.y * this.cellSize + this.cellSize / 2;
       
-      if (i === 0) {
-        this.pathGraphics.moveTo(px, py);
-      } else {
-        this.pathGraphics.lineTo(px, py);
+      const dx = px2 - px1;
+      const dy = py2 - py1;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const steps = Math.floor(dist / (this.cellSize * 0.3));
+      
+      for (let j = 0; j < steps; j += 2) {
+        const t1 = j / steps;
+        const t2 = Math.min((j + 1) / steps, 1);
+        const x1 = px1 + dx * t1;
+        const y1 = py1 + dy * t1;
+        const x2 = px1 + dx * t2;
+        const y2 = py1 + dy * t2;
+        
+        this.pathGraphics.moveTo(x1, y1);
+        this.pathGraphics.lineTo(x2, y2);
       }
     }
     
@@ -203,7 +220,7 @@ export default class GameScene extends Phaser.Scene {
     
     this.add.text(startX, startY, '入口', {
       fontSize: this.isMobile ? '10px' : '12px',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
       color: '#ffffff',
       backgroundColor: '#16a34a',
       padding: { x: 4, y: 2 }
@@ -216,7 +233,7 @@ export default class GameScene extends Phaser.Scene {
     
     this.add.text(endX, endY, this.isMobile ? '川藏' : '川藏立交', {
       fontSize: this.isMobile ? '8px' : '10px',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
       color: '#ffffff',
       backgroundColor: '#2563eb',
       padding: { x: 4, y: 2 }
@@ -230,7 +247,7 @@ export default class GameScene extends Phaser.Scene {
     // Money
     this.moneyText = this.add.text(hudX, hudY, `预算: ${this.gameState.money}`, {
       fontSize: this.isMobile ? '14px' : '20px',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
       color: '#fbbf24',
       fontStyle: 'bold'
     });
@@ -238,7 +255,7 @@ export default class GameScene extends Phaser.Scene {
     // Lives
     this.livesText = this.add.text(hudX, hudY + (this.isMobile ? 25 : 35), `安全度: ${this.gameState.lives}`, {
       fontSize: this.isMobile ? '14px' : '20px',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
       color: '#60a5fa',
       fontStyle: 'bold'
     });
@@ -246,7 +263,7 @@ export default class GameScene extends Phaser.Scene {
     // Wave
     this.waveText = this.add.text(hudX, hudY + (this.isMobile ? 50 : 70), `波次: ${this.gameState.waveIndex + 1}/${this.level.waves.length}`, {
       fontSize: this.isMobile ? '14px' : '20px',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
       color: '#e2e8f0',
       fontStyle: 'bold'
     });
@@ -266,7 +283,9 @@ export default class GameScene extends Phaser.Scene {
     // Exit button
     this.exitButton = this.createButton(buttonX, buttonY, buttonSize, '退出', 0xef4444, () => {
       soundManager.stopBGM();
-      this.scene.start('MenuScene');
+      if (this.onExitCallback) {
+        this.onExitCallback();
+      }
     });
     
     buttonX -= buttonSize + 10;
@@ -315,7 +334,7 @@ export default class GameScene extends Phaser.Scene {
     
     const text = this.add.text(0, 0, label, {
       fontSize: this.isMobile ? '10px' : '14px',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
       color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -356,14 +375,14 @@ export default class GameScene extends Phaser.Scene {
       
       const nameText = this.add.text(0, 10, stats.name, {
         fontSize: this.isMobile ? '10px' : '12px',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         color: '#ffffff',
         fontStyle: 'bold'
       }).setOrigin(0.5);
       
       const costText = this.add.text(0, 25, `${stats.cost}`, {
         fontSize: this.isMobile ? '9px' : '11px',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         color: '#fbbf24',
         fontStyle: 'bold'
       }).setOrigin(0.5);
@@ -578,7 +597,7 @@ export default class GameScene extends Phaser.Scene {
     } else {
       const maxText = this.add.text(0, yOffset, '最高等级', {
         fontSize: this.isMobile ? '10px' : '12px',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         color: '#fbbf24'
       }).setOrigin(0.5);
       container.add(maxText);
@@ -606,7 +625,7 @@ export default class GameScene extends Phaser.Scene {
     
     const text = this.add.text(0, 0, label, {
       fontSize: this.isMobile ? '11px' : '13px',
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
       color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -1073,7 +1092,7 @@ export default class GameScene extends Phaser.Scene {
       victory ? '行动成功' : '交通瘫痪',
       {
         fontSize: this.isMobile ? '36px' : '48px',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         color: victory ? '#3b82f6' : '#ef4444',
         fontStyle: 'bold'
       }
@@ -1087,7 +1106,7 @@ export default class GameScene extends Phaser.Scene {
         : "太多非法车辆穿过立交桥。城市陷入混乱！",
       {
         fontSize: this.isMobile ? '16px' : '20px',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         color: '#e2e8f0',
         align: 'center',
         wordWrap: { width: this.scale.width - 40 }
@@ -1113,7 +1132,9 @@ export default class GameScene extends Phaser.Scene {
       0x64748b,
       () => {
         soundManager.stopBGM();
-        this.scene.start('MenuScene');
+        if (this.onExitCallback) {
+          this.onExitCallback();
+        }
       }
     );
   }

@@ -23,7 +23,7 @@ export default class MenuScene extends Phaser.Scene {
       '摩法交通 卫士',
       {
         fontSize: this.isMobile ? '36px' : '72px',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         color: '#ffffff',
         fontStyle: 'bold'
       }
@@ -35,7 +35,7 @@ export default class MenuScene extends Phaser.Scene {
       '部署千军万马。阻止飙车,炸街,无证人员穿越川藏立交。',
       {
         fontSize: this.isMobile ? '14px' : '20px',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         color: '#94a3b8',
         align: 'center',
         wordWrap: { width: this.scale.width - 40 }
@@ -73,7 +73,7 @@ export default class MenuScene extends Phaser.Scene {
       '城市交通控制系统 v2.5',
       {
         fontSize: '12px',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         color: '#334155'
       }
     ).setOrigin(0.5);
@@ -109,7 +109,7 @@ export default class MenuScene extends Phaser.Scene {
       title,
       {
         fontSize: this.isMobile ? '20px' : '24px',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         color: '#ffffff',
         fontStyle: 'bold'
       }
@@ -122,7 +122,7 @@ export default class MenuScene extends Phaser.Scene {
       description,
       {
         fontSize: this.isMobile ? '11px' : '13px',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         color: '#94a3b8',
         align: 'center',
         wordWrap: { width: buttonWidth - 20 }
