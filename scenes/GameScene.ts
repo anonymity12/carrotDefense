@@ -370,8 +370,8 @@ export default class GameScene extends Phaser.Scene {
         .on('pointerout', () => {
           bg.setStrokeStyle(2, this.selectedTowerType === type ? 0x3b82f6 : 0x334155);
         });
-      
-      const icon = this.add.circle(0, -10, this.isMobile ? 12 : 16, parseInt(stats.color.replace('bg-', '').replace('-500', '').replace('-600', '').replace('-800', ''), 16));
+      // change to getTowerIcon
+      const icon = this.add.text(0, -10, this.getTowerIcon(type)).setOrigin(0.5);
       
       const nameText = this.add.text(0, 10, stats.name, {
         fontSize: this.isMobile ? '10px' : '12px',
